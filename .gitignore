@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# Env & secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Local dev database
+*.sqlite3
+
+# Local scheduler logs
+backend/scripts/*.log
+backend/logs/
+
+# Prompt-eval dry-run outputs (prompt_eval.py)
+backend/eval_out/
+
+# Editor / OS / local tooling
+.claude/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

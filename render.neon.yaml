@@ -1,0 +1,166 @@
+# Render blueprint — J2H4All, COST-OPTIMIZED (~$7/mo).
+#
+# Difference vs render.yaml: the managed Postgres is removed and DATABASE_URL is
+# supplied as a secret pointing at an external free Postgres (Neon). The web
+# service stays on Starter (always-on: reliable Telegram webhook + OAuth + instant
+# UI). The three crons are billed by runtime (seconds/day) so they cost < $1/mo.
+#
+# Provisioning:
+#   DB    → Neon free tier (0.5 GB, scale-to-zero) = $0
+#   Web   → Starter = $7/mo
+#   Crons → runtime-billed = < $1/mo
+#
+# Set DATABASE_URL (on ALL four services) to your Neon connection string, e.g.
+#   postgresql://user:pass@ep-xxx.eu-central-1.aws.neon.tech/j2h4all?sslmode=require
+# config.Settings.sqlalchemy_url rewrites postgresql:// → postgresql+psycopg://.
+services:
+  - type: web
+    name: j2h4all
+    runtime: python
+    plan: starter
+    buildCommand: |
+      pip install -r backend/requirements.txt
+      cd frontend && npm ci && npm run build
+    startCommand: cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: APP_ENV
+        value: production
+      # Native Garmin sync works from Render again: the OAuth2 refresh grant on
+      # diauth.garmin.com is not IP-blocked (only the OAuth1 exchange is). Kill-switch —
+      # leave true; set false to fall back to the home PC (scripts/home_sync.ps1).
+      - key: GARMIN_SYNC_ENABLED
+        value: "true"
+      # Approved run sessions become scheduled Garmin structured workouts (rolled out
+      # 2026-07-11). Declared here so a Blueprint re-sync doesn't silently revert the
+      # feature to its code default (false).
+      - key: GARMIN_WORKOUT_PUSH_ENABLED
+        value: "true"
+      # External Postgres (Neon) — set the connection string in the dashboard.
+      - key: DATABASE_URL
+        sync: false
+      # Secrets — set values in the Render dashboard, never in this file.
+      - key: APP_BASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_GOOGLE_EMAIL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GARTH_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+
+  # Daily Garmin sync (PRD §7). Restored after the diauth OAuth2-refresh fix — runs
+  # natively from Render again. Schedule is FIXED UTC (unlike the in-app local-clock
+  # beats): 01:00 UTC — pick an hour that lands after the athlete's night, so the morning watch
+  # sync has landed sleep/HRV in Garmin's cloud before this pulls. If he relocates,
+  # this stays at 01:00 UTC; the beats' own pre-beat sync covers the difference.
+  - type: cron
+    name: j2h4all-cron
+    runtime: python
+    plan: starter
+    schedule: "0 1 * * *"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python -m app.jobs daily_sync
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: APP_ENV
+        value: production
+      - key: GARMIN_SYNC_ENABLED
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      # GARTH_TOKEN bootstraps auth (OAuth1 + seed OAuth2); the rotating OAuth2 refresh
+      # token is persisted in the DB (Preference 'garmin_oauth2_token') and refreshed via
+      # diauth on each run. daily_sync also runs post-sync coaching + failure alerts.
+      - key: GARTH_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      # After the sync, the cron reconciles the Google Calendar so completed runs are
+      # marked ✅ done. That token refresh needs the Google creds — set them in the
+      # dashboard (sync:false), same values as the web service. Missing → the daily
+      # reconcile skips and pings a warning (jobs._push_calendar_after_daily_sync).
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+
+  # Proactive-beat dispatcher (PRD §12/§16). Hourly (UTC); the job checks the
+  # user's LOCAL clock and fires brief / check-in / Sunday review once per local
+  # day. (Run denser than hourly only if a beat is configured on a half-hour.)
+  - type: cron
+    name: j2h4all-tick
+    runtime: python
+    plan: starter
+    schedule: "0 * * * *"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python -m app.jobs tick
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      # The tick sends Telegram messages and runs coaching (LLM), and each beat runs a
+      # pre-sync (diauth refresh works from Render) so brief/check-in/review see fresh data.
+      - key: GARMIN_SYNC_ENABLED
+        value: "true"
+      - key: GARTH_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+  # Monthly state export to Google Drive (PRD §15) — 06:00 UTC on the 1st.
+  - type: cron
+    name: j2h4all-export
+    runtime: python
+    plan: starter
+    schedule: "0 6 1 * *"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python -m app.jobs monthly_export
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      # So a failed export can ping (alert_cron_failure).
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false

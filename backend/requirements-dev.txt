@@ -1,0 +1,9 @@
+# Dev/test-only deps (not installed on Render). Install: pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8
+# Lint: catches unused imports / dead code / undefined names (config in ruff.toml).
+# Run: ruff check .   (from backend/)
+ruff>=0.6
+# Git pre-commit hooks (.pre-commit-config.yaml at repo root). After install:
+#   pre-commit install   (from repo root, once)
+pre-commit>=3.7

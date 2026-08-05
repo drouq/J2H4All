@@ -1,0 +1,11 @@
+# Git pre-commit hooks for J2H4All. Install once after cloning:
+#   cd backend && pip install -r requirements-dev.txt
+#   pre-commit install          # run from the repo root
+# Then `ruff check` runs automatically on staged Python files at each commit.
+# Rev pinned to match the ruff in requirements-dev.txt; the hook auto-discovers
+# backend/ruff.toml (F + E4/E7/E9, no restyling).
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.22
+    hooks:
+      - id: ruff

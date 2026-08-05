@@ -1,0 +1,54 @@
+# CI for J2H4All — `ruff check` + the full pytest suite on every push to main.
+#
+# Why this exists even though a pre-commit hook already runs ruff: the hook lives on
+# whichever machine ran `pre-commit install` and is trivially skipped (`--no-verify`,
+# a fresh clone, an agent committing without it), and it never runs the TESTS at all.
+# This repo pushes straight to `main` and Render deploys on push, so an untested push
+# is a deploy — the gap this closes is "a bad commit reaches production and the first
+# signal is a monitor cron-failure ping hours later".
+#
+# Runs on pull_request too, so the workflow still works if the no-branch/no-PR
+# convention is ever relaxed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      # v4/v5 still run, but on Node 20 — deprecated, and GitHub already force-runs
+      # them on Node 24 with a warning. Pinned to the current majors instead.
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          # Matches the local venv and ruff.toml's target-version.
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      # requirements-dev.txt pulls in requirements.txt, so this installs the app deps
+      # too — the suite imports app.main / app.llm / the garmin modules, so a
+      # tests-only install would fail at collection.
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # Same config the pre-commit hook uses (backend/ruff.toml, auto-discovered):
+      # F + E4/E7/E9, no restyling.
+      - name: Lint
+        run: ruff check .
+
+      # No env/services needed: conftest builds a throwaway in-memory SQLite DB per
+      # test from the models, and nothing here talks to Neon, Garmin or Anthropic.
+      - name: Tests
+        run: pytest

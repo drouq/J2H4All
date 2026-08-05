@@ -1,0 +1,540 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.ok {
+  color: #4ade80;
+}
+
+.err {
+  color: #f87171;
+}
+
+/* A session completed but >20% off plan — amber, not red: it happened, it just
+   didn't happen as prescribed. Matches the ⚠️ on the training calendar. */
+.warn {
+  color: #fbbf24;
+}
+
+.blood-flag {
+  color: #fbbf24;
+}
+
+a.button,
+button {
+  display: inline-block;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.secondary {
+  background: #334155;
+}
+
+button.x {
+  background: transparent;
+  color: #94a3b8;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.9rem;
+}
+
+textarea {
+  width: 100%;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.6rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.review {
+  margin-top: 1rem;
+  border-top: 1px solid #334155;
+  padding-top: 0.75rem;
+}
+
+.chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.snapshot {
+  margin-top: 1rem;
+  border-top: 1px solid #334155;
+  padding-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.snapshot p {
+  margin: 0.35rem 0;
+}
+
+.label {
+  display: inline-block;
+  min-width: 4.5rem;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+.badge {
+  display: inline-block;
+  background: #334155;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+.goalbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #334155;
+  margin-bottom: 0.5rem;
+}
+
+.goalbar .big {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1;
+}
+
+.ff {
+  background: #0f172a;
+  border-left: 3px solid #f59e0b;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.9rem;
+}
+
+.phases {
+  margin: 0.75rem 0;
+}
+
+.phase {
+  border-left: 3px solid #2563eb;
+  padding: 0.3rem 0.7rem;
+  margin-bottom: 0.4rem;
+}
+
+.phase-h {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.session {
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+
+.session summary {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.session .sdate {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  min-width: 3rem;
+}
+
+.session .stitle {
+  flex: 1;
+}
+
+.session.t-rest {
+  opacity: 0.6;
+}
+
+.session.t-long_run {
+  border-left: 3px solid #a855f7;
+}
+
+.session.t-intervals,
+.session.t-tempo {
+  border-left: 3px solid #ef4444;
+}
+
+.fuel {
+  color: #fbbf24;
+  margin-top: 0.2rem;
+}
+
+.revise {
+  margin-top: 0.75rem;
+}
+
+.revise textarea {
+  width: 100%;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.6rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.trend {
+  margin: 0.9rem 0;
+}
+
+.trend-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.chart {
+  width: 100%;
+  height: 96px;
+  background: #0f172a;
+  border-radius: 8px;
+  display: block;
+}
+
+/* --- sticky section nav (G) --- */
+html {
+  scroll-behavior: smooth;
+}
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  margin: 1.5rem -1.25rem 0;
+  padding: 0.6rem 1.25rem;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid #1e293b;
+  white-space: nowrap;
+}
+
+.tabs a {
+  color: #cbd5e1;
+  background: #1e293b;
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+}
+
+section {
+  scroll-margin-top: 3.2rem;
+}
+
+/* --- today callout + week grouping (A, E) --- */
+.today-card {
+  background: #0f172a;
+  border: 1px solid #2563eb;
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.today-card.empty {
+  border-color: #334155;
+}
+
+.today-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #60a5fa;
+  margin-bottom: 0.35rem;
+}
+
+.today-session + .today-session {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #1e293b;
+}
+
+.today-title {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.week + .week {
+  margin-top: 0.6rem;
+}
+
+.week-h {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0.4rem 0 0.25rem;
+}
+
+.session.today {
+  border: 1px solid #2563eb;
+}
+
+.today-badge {
+  background: #2563eb;
+  color: #fff;
+}
+
+/* --- Trends KPI strip (B) --- */
+.kpi-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.kpi {
+  flex: 1 1 4.5rem;
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+}
+
+.kpi-label {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kpi-value {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.15rem;
+}
+
+.kpi-unit {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.kpi-delta {
+  font-size: 0.75rem;
+  margin-left: 0.25rem;
+}
+
+.up-good {
+  color: #4ade80;
+}
+
+.up-bad {
+  color: #f87171;
+}
+
+/* --- training load balance (80/20) --- */
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.3rem 0;
+}
+
+.lb-label {
+  flex: 0 0 5.5rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.lb-track {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  background: #0f172a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.lb-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(74, 222, 128, 0.22);
+  border-left: 1px solid rgba(74, 222, 128, 0.5);
+  border-right: 1px solid rgba(74, 222, 128, 0.5);
+}
+
+.lb-marker {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 3px;
+  border-radius: 2px;
+}
+
+.lb-val {
+  flex: 0 0 5.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-target {
+  color: #64748b;
+}
+
+.lb-feedback {
+  margin-top: 0.35rem;
+}
+
+/* --- heat acclimation --- */
+.heat-bar {
+  position: relative;
+  height: 20px;
+  background: #0f172a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.heat-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, #f59e0b, #f87171);
+  border-radius: 6px;
+}
+
+.heat-pct {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+/* --- chart axes (D) --- */
+.chart-wrap {
+  position: relative;
+}
+
+.axis-y {
+  position: absolute;
+  right: 0.35rem;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 0 0.15rem;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.axis-max {
+  top: 0.15rem;
+}
+
+.axis-min {
+  bottom: 0.15rem;
+}
+
+.axis-x {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.2rem;
+}
+
+/* --- collapsible bloods (C) --- */
+.bloods summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.bloods summary::-webkit-details-marker {
+  display: none;
+}
+
+.bloods summary::before {
+  content: "▸";
+  color: #94a3b8;
+  margin-right: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.bloods[open] summary::before {
+  content: "▾";
+}
+
+.bloods-list {
+  margin-top: 0.4rem;
+  line-height: 1.5;
+}

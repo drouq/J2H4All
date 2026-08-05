@@ -1,0 +1,21 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+sqlalchemy==2.0.41
+alembic==1.16.1
+psycopg[binary]==3.2.9
+pydantic-settings==2.9.1
+httpx==0.28.1
+itsdangerous==2.2.0
+# Pinned exactly. garth is deprecated upstream (github.com/matin/garth/discussions/222):
+# Garmin's Cloudflare TLS fingerprinting blocks the 0.7+ mobile login flow (429s).
+# 0.6.3 uses the older web SSO login, which still works; stored tokens work on any version.
+garth==0.6.3
+# Chrome-TLS impersonation for the OAuth1 exchange (app/garmin/impersonate.py) —
+# only the residential re-bootstrap path since the diauth OAuth2 refresh fix
+# (garmin/oauth2.py) let Render sync natively again. Kept for that fallback.
+curl_cffi==0.15.0
+# Imported directly by garmin/impersonate.py (OAuth1 signing) — declared explicitly
+# rather than relying on garth's transitive requests-oauthlib -> oauthlib.
+oauthlib==3.3.1
+anthropic==0.116.0
+python-multipart==0.0.20
