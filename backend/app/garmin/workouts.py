@@ -114,12 +114,12 @@ def _end_fields(duration_min, distance_km) -> dict:
 # to fix at the end of an easy run (they are already in zone), it would be a step they look
 # at on every run forever to change nothing, and it costs most where it helps least — a
 # 30 min recovery jog would become 5 free + 20 Z1 + 5 free, stripping the ceiling out of
-# the one session whose entire purpose is holding it. On the long runs the coach also
-# wants the final half-hour governed by HIM holding pace and HR flat (the durability KPI
-# for this race, and their last two long runs drifted late) — a free step there would
-# legitimise exactly the fade they's coaching out.
-EASE_MIN = 5.0   # minutes — long enough that HR has arrived (or fallen), in their heat
-EASE_KM = 0.8    # ≈ EASE_MIN at their easy pace, for a distance-ended step
+# the one session whose entire purpose is holding it. And on long runs the closing
+# stretch is where late-run durability shows — the athlete holding pace and HR flat is
+# the point of the session, so a free step there would legitimise exactly the fade the
+# coach is training out.
+EASE_MIN = 5.0   # minutes — long enough for HR to arrive (or fall), even in heat
+EASE_KM = 0.8    # ≈ EASE_MIN at an easy pace, for a distance-ended step
 
 
 def _has_target(step: dict) -> bool:

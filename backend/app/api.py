@@ -85,8 +85,9 @@ def extract_context(
     state = ctx_store.get_or_create_state(db)
     from .coach.schedule import local_today
     try:
-        # Anchor relative dates ("tomorrow") on HIS local day, like the
-        # Telegram arm — a UTC anchor mis-dates windows/injuries in their 00:00-08:00 window.
+        # Anchor relative dates ("tomorrow") on the athlete's local day, like the
+        # Telegram arm — for a zone ahead of UTC, a UTC anchor mis-dates
+        # windows/injuries through the whole early morning.
         items = ctx_extract.extract_items(body.text, local_today(db), state.timezone)
     except LLMNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc))

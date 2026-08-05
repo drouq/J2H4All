@@ -3,7 +3,7 @@ local morning, so a frequent `tick` computes their local time (from user_state.t
 and fires each beat at its configured local hour, at most once per local day.
 
 - morning brief  → daily at morning_brief_hour:morning_brief_minute (10:00 local —
-  after the 09:00-SGT daily sync, so it reads last night's recovery)
+  after the daily sync lands, so it reads last night's recovery)
 - daily debrief  → daily at daily_debrief_hour (22:00 — feel + life factors, merged)
 - weekly review  → Sunday at weekly_review_hour (23:00)
 

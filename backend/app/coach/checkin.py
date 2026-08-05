@@ -124,7 +124,7 @@ def _upsert(db: DbSession, today: date, **fields) -> Checkin:
 def record_quick(db: DbSession, option: str, today: date | None = None) -> Checkin | None:
     if today is None:
         from .schedule import local_today
-        today = local_today(db)  # a 23:30 SGT check-in belongs to HIS day, not UTC's
+        today = local_today(db)  # a late-evening check-in belongs to the athlete's day, not UTC's
     preset = QUICK.get(option)
     if not preset:
         return None

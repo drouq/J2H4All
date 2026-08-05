@@ -63,7 +63,7 @@ def test_plain_run_opens_target_free_and_keeps_its_total():
 
 def test_a_plain_run_gets_no_trailing_free_step():
     """Asked and DECLINED by the coach: there is no alert to fix at the end of an easy
-    run (they's already in zone), so a cooldown step would be clutter on every run
+    run (they are already in zone), so a cooldown step would be clutter on every run
     forever — and it costs most where it helps least. Guards the decision, not a bug."""
     steps = _steps(workouts.build_workout(
         {"title": "Easy Aerobic", "duration_min": 55, "target_zone": "Z2"}))

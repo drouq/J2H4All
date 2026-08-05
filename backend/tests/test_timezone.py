@@ -64,7 +64,7 @@ def test_doctrine_timezone_line_survives_no_db():
 
 
 def test_doctrine_defaults_to_his_local_day_not_the_server_day(db):
-    """A caller that omits `today` must still get HIS day. The default was
+    """A caller that omits `today` must still get THEIR day. The default was
     `date.today()` (UTC on Render) until 2026-08-03 — latent, since every caller
     passes `today`, but one that forgot would render the days-to-race countdown a
     day short through their whole 00:00-08:00 window. Proven with two zones 26h

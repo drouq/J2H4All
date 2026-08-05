@@ -73,7 +73,7 @@ class Settings(BaseSettings):
 
     # Proactive-cadence hours, on the user's LOCAL clock. Exact hours
     # configurable without a code change. Weekly review is Sunday evening.
-    # The brief runs at 10:00 local: AFTER the 09:00-SGT daily sync (01:00 UTC cron)
+    # The brief runs at 10:00 local: pick an hour AFTER your daily sync cron lands
     # so it briefs on last night's sleep/HRV, not yesterday's. A non-zero minute
     # needs the tick cron denser than hourly (see render*.yaml j2h4all-tick).
     morning_brief_hour: int = 10

@@ -200,8 +200,8 @@ def apply_sessions(db: DbSession, sessions: list[dict], macro_plan_id: int | Non
     from ..coach.schedule import local_today
     from ..garmin.workouts import PUSH_TYPES
 
-    today = local_today(db)  # their local day — a UTC 'today' would, in their
-    # 00:00-08:00 window, drop/keep the wrong day and orphan a completed session's result.
+    today = local_today(db)  # their local day — for a zone ahead of UTC, a UTC
+    # 'today' would overnight drop/keep the wrong day and orphan a completed session's result.
     # Never re-issue the past, and never supersede a session already RUN today —
     # approving a Sunday-evening review whose block starts that Sunday must not
     # orphan the morning's completed session (its ✅/result linkage would be

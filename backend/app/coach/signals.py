@@ -328,7 +328,7 @@ def data_freshness(db: DbSession, today: date) -> dict:
     # WellnessDaily.synced_at is OUR backend's pull time (_utcnow() at sync), NOT
     # when the athlete's watch uploaded to Garmin — we have no such signal. Named and
     # rendered explicitly so the coach can't retell our 01:00-UTC cron as "your
-    # watch synced at 2am" (it did that: a UTC hour quoted raw, 8h off in SGT).
+    # watch synced at 2am" (it did that: a UTC hour quoted raw, hours off in a far-from-UTC zone).
     last_pull = db.scalar(
         select(WellnessDaily.synced_at).order_by(WellnessDaily.synced_at.desc()).limit(1)
     )
@@ -351,7 +351,7 @@ def deep_recovery(db: DbSession, today: date) -> dict:
     skin-temperature deviation (Garmin computes it vs their personal baseline —
     a rise is a classic pre-symptom fever signal), sleep restlessness (context
     for the RLS sleep-score rule — their restlessness is chronically high, so
-    judge vs HIS baseline), and body battery at wake."""
+    judge vs their OWN baseline), and body battery at wake."""
     rows = db.scalars(
         select(WellnessDaily).where(
             WellnessDaily.date >= today - timedelta(days=30),

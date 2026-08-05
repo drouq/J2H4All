@@ -111,10 +111,6 @@ def bound_chat_id(db=None) -> str | None:
     return value
 
 
-def is_bound(db) -> bool:
-    return bound_chat_id(db) is not None
-
-
 def start_pairing(db) -> dict:
     """Arm a single-use pairing code. Called only from the authenticated web app.
 

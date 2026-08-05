@@ -61,8 +61,9 @@ def _default_today(db) -> date:
     """The 'today' to use when a caller doesn't pass one — the athlete's LOCAL day, not
     the server's. Every current caller passes `today`, so this was latent, but the old
     `date.today()` default meant any future one that forgot would render the
-    days-to-race countdown a day short throughout the athlete's 00:00-08:00 window
-    (the host runs UTC). Falls back to the server day only when there's no db to ask —
+    days-to-race countdown a day short through the whole early morning for an athlete
+    in a zone ahead of UTC (the host runs UTC). Falls back to the server day only when
+    there's no db to ask —
     `_facts` accepts `db=None` for the static/no-store rendering path."""
     if db is None:
         return date.today()

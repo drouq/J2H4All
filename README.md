@@ -140,7 +140,7 @@ Tests and lint — both also run in CI on every push:
 cd backend && python -m pytest && python -m ruff check .
 ```
 
-The suite is ~250 tests on in-memory SQLite. It needs no network, no credentials and no
+The suite runs on in-memory SQLite. It needs no network, no credentials and no
 services, so it runs anywhere.
 
 ## Contributing
