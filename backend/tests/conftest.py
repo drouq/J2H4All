@@ -16,6 +16,22 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models import Base  # noqa: E402
+from app.config import Settings, get_settings  # noqa: E402
+
+# Tests must be isolated from whatever is in the developer's backend/.env.
+# Without this, following SETUP.md (which tells you to create that file) turns the
+# suite red for reasons that have nothing to do with your change: Settings() would
+# silently inherit APP_ENV, DEV_AUTH_BYPASS_EMAIL and the rest, so the tests that
+# assert on production-gate behaviour see a development config instead. CI has no
+# .env and so never caught it. The suite builds every Settings it needs explicitly.
+Settings.model_config["env_file"] = None
+for _leaked in ("APP_ENV", "DATABASE_URL", "SECRET_KEY", "ALLOWED_GOOGLE_EMAIL",
+                "DEV_AUTH_BYPASS_EMAIL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
+                "TELEGRAM_WEBHOOK_SECRET", "ANTHROPIC_API_KEY", "GARTH_TOKEN",
+                "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN",
+                "MODEL_MAP_JSON", "GARMIN_SYNC_ENABLED", "GARMIN_WORKOUT_PUSH_ENABLED"):
+    os.environ.pop(_leaked, None)
+get_settings.cache_clear()
 
 
 @pytest.fixture

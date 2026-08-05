@@ -22,9 +22,11 @@ The ~115 inherited gendered pronouns are gone from the prompts; static prose is 
 the coach is told the athlete's actual pronouns, defaulting to they/them rather than
 guessing. `dietary_profile.diet` no longer defaults to one athlete's diet.
 
-Still open here: the profile is only writable through code. It needs to be settable from
-chat (extend the context extractor with a `profile` item kind) and from the web Context
-panel — folded into the onboarding work in §3.
+Writable from chat too: the context extractor has a `profile` item kind, so "call me Sam,
+they/them, and my sleep score is always awful because of restless legs" lands in the right
+fields via the usual extract → confirm → write loop. The web Context panel shows who the
+coach thinks it's coaching, so wrong pronouns are visible at a glance rather than
+discovered in a morning brief.
 
 ## 2. Format-agnostic doctrine *(blocks non-backyard athletes)*
 
@@ -84,14 +86,18 @@ remove the two steps most likely to strand someone:
 > only its *source* changes, with the environment variable keeping precedence — and it
 > needs explicit test coverage before it ships. Do not slip this in as wizard plumbing.
 
-## 4. Setup documentation
+## 4. Setup documentation — ✅ DONE
 
-A `SETUP.md` walking through all six provisioning tracks in order, leading with the two
-known time-sinks (the Garmin residential bootstrap, and the Google consent screen that must
-be set to "In production" or the refresh token dies after 7 days).
+[SETUP.md](SETUP.md) walks through all six provisioning tracks in order, leading with the
+two known time-sinks (the Garmin residential bootstrap, and the Google consent screen that
+must be set to "In production" or the refresh token dies after 7 days), and ends with a
+symptom→cause troubleshooting table.
 
-A `python -m app.jobs doctor` preflight that checks every credential and prints exactly
-what's missing pays for itself on the first install.
+`python -m app.jobs doctor` is a read-only, no-network preflight that reports what is
+configured, what is missing, and **what to do about each gap**. Exit code 0/1/2 (clean /
+warnings / broken) so it can gate a deploy. It also looks in the database for the two
+things that are invisible from the environment: whether an athlete profile exists, and
+whether the goal is still the placeholder.
 
 ## 5. Housekeeping
 

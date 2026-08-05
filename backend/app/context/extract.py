@@ -18,6 +18,7 @@ ITEM_KINDS = [
     "preference",
     "note",
     "timezone",
+    "profile",
 ]
 
 # Hand-written schema (full control over required/additionalProperties). Every
@@ -45,10 +46,20 @@ _ITEM_SCHEMA = {
         "key": {"type": ["string", "null"], "description": "preference key, e.g. long_run_day"},
         "text": {"type": ["string", "null"], "description": "free text for dietary_note / preference value / note"},
         "timezone": {"type": ["string", "null"], "description": "IANA zone, e.g. Europe/London"},
+        # dietary_note
+        "diet": {"type": ["string", "null"], "description": "diet pattern they state: omnivore, vegetarian, vegan, coeliac..."},
+        # profile — who the athlete is. Each field independent: a message that only
+        # mentions a name must leave the others null so the merge can't blank them.
+        "name": {"type": ["string", "null"], "description": "what they want the coach to call them"},
+        "pronouns": {"type": ["string", "null"], "description": "exactly as they state them, e.g. she/her, he/him, they/them"},
+        "birthdate": {"type": ["string", "null"], "description": "ISO date. Also set this if they give an AGE — convert against today."},
+        "language": {"type": ["string", "null"], "description": "IETF tag (en, fr) if they ask to be coached in a language"},
+        "data_caveats": {"type": ["string", "null"], "description": "something that makes THEIR data read wrong (not how they train): restless legs, newborn, shift work, HR-capping medication"},
     },
     "required": ["kind", "summary", "marker_name", "value", "unit", "measured_on",
                  "window_type", "start_date", "end_date", "body_part", "status",
-                 "key", "text", "timezone"],
+                 "key", "text", "timezone", "diet",
+                 "name", "pronouns", "birthdate", "language", "data_caveats"],
 }
 
 EXTRACT_TOOL_SCHEMA = {
@@ -71,9 +82,15 @@ def _system(today: date, current_tz: str) -> str:
         "- availability_window: a dated training constraint. window_type='treadmill' for treadmill-only periods; "
         "set start_date and end_date (null if open-ended). Resolve relative dates ('next 10 days') against today.\n"
         "- injury: a niggle or injury. Set body_part, status (active/resolved), and text for detail.\n"
-        "- dietary_note: a fueling/diet note (they is vegetarian, fixed). Put the note in text.\n"
+        "- dietary_note: a fueling/diet note. Set `diet` if they state a pattern (vegetarian, vegan, coeliac...), and put any detail in text.\n"
         "- preference: a structured constraint like long-run day or no-sessions-before time. Set key and text (the value).\n"
-        "- timezone: they say where they is ('I'm in London this week'). Set timezone to the IANA zone.\n"
+        "- timezone: they say where they are ('I'm in London this week'). Set timezone to the IANA zone.\n"
+        "- profile: who they ARE — name, pronouns, age/birthdate, preferred coaching language, or a "
+        "data caveat. A data_caveat is something that makes their DATA read wrong rather than something "
+        "about how they train: 'my sleep score is always awful because of restless legs', 'I work nights', "
+        "'beta blockers cap my heart rate'. Set only the fields they actually stated and leave the rest "
+        "null — a partial update must not blank what they didn't mention. Pronouns go in verbatim; never "
+        "infer them from a name.\n"
         "- note: anything coaching-relevant that fits no field. Put it in text.\n\n"
         "A single message may yield several items (e.g. 'I'm in Tokyo and on the treadmill for a week' = "
         "a timezone item AND a treadmill availability_window). If nothing is worth persisting, return an empty items list. "

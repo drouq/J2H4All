@@ -45,8 +45,8 @@ def start_sync(mode: str = "incremental", user: str = Depends(current_user)):
     if mode not in ("incremental", "full"):
         raise HTTPException(status_code=422, detail="mode must be 'incremental' or 'full'")
     if not get_settings().garmin_sync_enabled:
-        # Hybrid deploy: this host can't reach Garmin — ingestion runs from the home PC.
-        # Report honestly instead of starting a no-op background thread.
+        # Sync is switched off. Report honestly instead of starting a background
+        # thread that would do nothing and look like it worked.
         return {"started": False, "home_only": True}
     if garmin_sync._sync_lock.locked():
         raise HTTPException(status_code=409, detail="A sync is already running")

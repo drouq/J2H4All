@@ -129,6 +129,26 @@ function Snapshot({ snap }: { snap: ContextSnapshot }) {
   return (
     <div className="snapshot">
       <h3>What the coach knows</h3>
+      {/* Who the coach thinks it's coaching. Surfaced first and plainly, because a
+          wrong name or wrong pronouns should be obvious at a glance and fixable by
+          saying so above — not something you discover in a morning brief. */}
+      <p className="muted">
+        Coaching: <strong>{snap.athlete.name || "you (no name set)"}</strong>
+        {snap.athlete.age ? `, ${snap.athlete.age}` : ""} · {snap.athlete.pronouns}
+        {snap.athlete.language ? ` · ${snap.athlete.language}` : ""}
+      </p>
+      {!snap.athlete.configured && (
+        <p className="muted small">
+          The coach doesn't know who you are yet. Tell it above — your name, your pronouns,
+          your age, and anything that makes your data read wrong (restless legs, night
+          shifts, medication that caps your heart rate).
+        </p>
+      )}
+      {snap.athlete.data_caveats && (
+        <p className="muted small">
+          <span className="label">Data caveats</span> {snap.athlete.data_caveats}
+        </p>
+      )}
       <p className="muted">
         Timezone: <strong>{snap.timezone}</strong> · Diet: {snap.diet.diet}
         {snap.diet.notes ? ` (${snap.diet.notes.replace(/\n/g, "; ")})` : ""}

@@ -52,6 +52,14 @@ export type ContextItem = {
 
 export type ContextSnapshot = {
   timezone: string;
+  athlete: {
+    name: string | null;
+    pronouns: string;
+    age: number | null;
+    language: string | null;
+    data_caveats: string | null;
+    configured: boolean;
+  };
   diet: { diet: string; notes: string | null };
   blood_markers: {
     name: string; value: number; unit: string | null; measured_on: string; readings: number;

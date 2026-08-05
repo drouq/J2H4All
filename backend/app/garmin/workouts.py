@@ -96,7 +96,7 @@ def _end_fields(duration_min, distance_km) -> dict:
 #   END   — coming off 5x4 min at threshold their HR is 165-175 and takes minutes to
 #           fall through a Z1 cooldown ceiling, so the cooldown step alerts them for
 #           being ABOVE target. The coach rates this the worse of the two: at the
-#           start they is fresh and can shrug at a beep; at the end they is tired and hot,
+#           start they are fresh and can shrug at a beep; at the end they are tired and hot,
 #           and the watch is teaching them that recovering is a failure state.
 #
 # So both ends get a TARGET-FREE step, always CARVED OUT of the step it belongs to,
@@ -111,7 +111,7 @@ def _end_fields(duration_min, distance_km) -> dict:
 #
 # NB the ease-out fires ONLY on a cooldown the coach actually prescribed. Plain easy and
 # long runs get NO trailing free step — asked and declined explicitly: there is no alert
-# to fix at the end of an easy run (they is already in zone), it would be a step it looks
+# to fix at the end of an easy run (they are already in zone), it would be a step they look
 # at on every run forever to change nothing, and it costs most where it helps least — a
 # 30 min recovery jog would become 5 free + 20 Z1 + 5 free, stripping the ceiling out of
 # the one session whose entire purpose is holding it. On the long runs the coach also

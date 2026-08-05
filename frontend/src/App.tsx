@@ -98,16 +98,21 @@ function SyncCard() {
               : "No syncs yet."}
         </p>
       )}
+      {/* GARMIN_SYNC_ENABLED=false. The old copy here said syncing "runs from the
+          home PC twice daily", which was true only of a superseded deploy shape and
+          would send a new self-hoster looking for a schedule that doesn't exist.
+          Only the one-time login bootstrap needs a home network — see SETUP.md §4. */}
       {homeOnly && (
         <p className="muted">
-          Syncing runs from the home PC (twice daily) — this site can't reach Garmin directly.
+          Garmin sync is turned off (GARMIN_SYNC_ENABLED=false), so no data is being
+          pulled. Set it to true once you've bootstrapped your Garmin token.
         </p>
       )}
       {last?.status === "failure" && last.detail && (
         <p className="err">{last.detail.split("\n")[0]}</p>
       )}
       <button onClick={onSyncNow} disabled={homeOnly || (status?.running ?? false)}>
-        {homeOnly ? "Sync runs on home PC" : "Sync now"}
+        {homeOnly ? "Sync disabled" : "Sync now"}
       </button>
     </div>
   );
@@ -139,7 +144,10 @@ export default function App() {
   return (
     <main>
       <h1>J2H4All</h1>
-      <p className="muted">Journey to Hundred, for All — 24 laps, 17 Oct 2026</p>
+      {/* Deliberately says nothing about a specific race. This header renders on
+          every panel, including before any goal has loaded — the live goal (laps,
+          date, countdown) belongs in the Plan panel, which reads it from the store. */}
+      <p className="muted">Your own endurance coach</p>
 
       {state.phase === "loading" && <div className="card">Loading…</div>}
 

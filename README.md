@@ -78,7 +78,14 @@ render.neon.yaml   Deployment blueprint: web service + 3 cron jobs
 .env.example       Every environment variable the app reads
 ```
 
-## What you need to provision
+## Setup
+
+**[SETUP.md](SETUP.md) is the step-by-step guide.** Run the preflight check at any point to
+see what's still missing — it never writes anything and makes no network calls:
+
+```bash
+cd backend && python -m app.jobs doctor
+```
 
 Self-hosting means running your own everything. Budget **~2 hours** for first setup, and
 roughly **$12–25/month**:

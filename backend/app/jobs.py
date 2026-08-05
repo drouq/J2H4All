@@ -8,6 +8,7 @@ manual runs while developing locally).
     python -m app.jobs daily_debrief  # feel + lifestyle (aliases: daily_checkin, lifestyle_log)
     python -m app.jobs weekly_review
     python -m app.jobs monthly_export # dump full state to Google Drive (PRD §15)
+    python -m app.jobs doctor         # preflight: what's configured, what's missing
 """
 
 import logging
@@ -89,6 +90,14 @@ def _run_coach(job: str) -> int:
 
 def main() -> int:
     job = sys.argv[1] if len(sys.argv) > 1 else "noop"
+    if job == "doctor":
+        # Read-only, no network, never raises. Exit code carries the verdict so this
+        # can gate a deploy: 0 = clean, 1 = warnings, 2 = something is broken.
+        from .doctor import FAIL, WARN, run
+
+        report = run()
+        print(report.render())
+        return {FAIL: 2, WARN: 1}.get(report.worst, 0)
     if job == "noop":
         noop()
         return 0

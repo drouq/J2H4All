@@ -8,7 +8,7 @@ that a full state dump is assembled, uploaded under a dated name, stamped on suc
 and that a permission failure degrades LOUDLY rather than writing an empty backup.
 """
 import json
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -53,13 +53,16 @@ def drive(monkeypatch):
 
 
 def _seed(db):
-    db.add(Goal(format="backyard-ultra", race_date=date(2026, 10, 17), loop_km=6.706,
-                target_laps=24, status="active", floor_note="Beach Backyard",
+    # Dates are RELATIVE to today, never literals: a fixture pinned to a fixed date
+    # silently goes red the day it ages past a window the code cares about.
+    today = date.today()
+    db.add(Goal(format="backyard-ultra", race_date=today + timedelta(days=90), loop_km=6.706,
+                target_laps=24, status="active", floor_note="Test Backyard",
                 created_at=utcnow()))
-    db.add(Session(date=date(2026, 8, 8), type="long_run", title="Long Run", purpose="p",
+    db.add(Session(date=today + timedelta(days=3), type="long_run", title="Long Run", purpose="p",
                    status="planned", created_at=utcnow(), updated_at=utcnow()))
-    db.add(Checkin(date=date(2026, 8, 2), energy=5, created_at=utcnow()))
-    db.add(Note(text="sweat sodium 1064 mg/L", created_at=utcnow()))
+    db.add(Checkin(date=today - timedelta(days=3), energy=5, created_at=utcnow()))
+    db.add(Note(text="test coaching note", created_at=utcnow()))
     db.commit()
 
 
@@ -74,7 +77,7 @@ def test_assemble_state_covers_every_table_the_coach_depends_on(db):
         assert table in state, f"{table} missing from the backup"
     assert state["schema"] == "j2h4all-state-v1" and state["exported_at"]
     assert state["goal"][0]["format"] == "backyard-ultra"
-    assert state["note"][0]["text"] == "sweat sodium 1064 mg/L"
+    assert state["note"][0]["text"] == "test coaching note"
 
 
 def test_assemble_state_is_json_serializable(db):
@@ -111,8 +114,8 @@ def test_run_export_uploads_a_dated_file_and_stamps_success(db, drive):
 def test_the_upload_actually_carries_the_state(db, drive):
     _seed(db)
     backup.run_export(db, today=date(2026, 8, 3))
-    assert "Beach Backyard" in drive["uploaded"]
-    assert "sweat sodium" in drive["uploaded"]
+    assert "Test Backyard" in drive["uploaded"]
+    assert "test coaching note" in drive["uploaded"]
 
 
 def test_folder_id_is_cached_after_the_first_run(db, drive):

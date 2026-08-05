@@ -100,3 +100,43 @@ def test_diet_is_unspecified_until_told(db):
     assert store.snapshot(db)["diet"]["diet"] == "unspecified"
     store.apply_items(db, [{"kind": "dietary_note", "diet": "vegan", "text": "No dairy."}])
     assert store.snapshot(db)["diet"]["diet"] == "vegan"
+
+
+def test_profile_can_be_set_from_chat(db):
+    """The loop that makes the profile usable: talk -> extract -> confirm -> write.
+    Without this the table is only reachable from code, which is no use to the
+    athlete whose profile it is."""
+    from app.context import extract
+
+    assert "profile" in extract.ITEM_KINDS
+    store.apply_items(db, [{
+        "kind": "profile", "summary": "Call you Sam, they/them",
+        "name": "Sam", "pronouns": "they/them", "data_caveats": "Night shifts.",
+    }])
+    view = store.profile_view(db)
+    assert view["name"] == "Sam"
+    assert view["data_caveats"] == "Night shifts."
+    assert view["configured"] is True
+
+
+def test_chat_profile_update_is_partial(db):
+    """A later message that only corrects the name must not blank the caveats —
+    the same skip-nulls contract, but proven through the chat path, which is the
+    one that actually sends sparse items."""
+    store.apply_items(db, [{"kind": "profile", "summary": "x", "name": "Sam",
+                            "pronouns": "she/her", "data_caveats": "Night shifts."}])
+    store.apply_items(db, [{"kind": "profile", "summary": "x", "name": "Samantha"}])
+    view = store.profile_view(db)
+    assert view["name"] == "Samantha"
+    assert view["pronouns"] == "she/her"
+    assert view["data_caveats"] == "Night shifts."
+
+
+def test_malformed_birthdate_drops_the_field_not_the_write(db):
+    """The extractor can hand back a bad date. That must cost us the birthdate,
+    never the name that arrived in the same message."""
+    store.apply_items(db, [{"kind": "profile", "summary": "x",
+                            "name": "Sam", "birthdate": "sometime in 1990"}])
+    view = store.profile_view(db)
+    assert view["name"] == "Sam"
+    assert view["age"] is None

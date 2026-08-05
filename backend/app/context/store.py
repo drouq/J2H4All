@@ -51,6 +51,8 @@ def apply_items(db: Session, items: list[dict], source: str = "chat") -> list[st
             _apply_preference(db, item)
         elif kind == "timezone":
             _apply_timezone(db, item)
+        elif kind == "profile":
+            _apply_profile(db, item)
         elif kind == "note":
             _apply_note(db, item)
         else:
@@ -159,6 +161,23 @@ def _apply_note(db: Session, item: dict) -> None:
     text = item.get("text") or item.get("summary")
     if text:
         db.add(Note(text=text, created_at=_utcnow()))
+
+
+def _apply_profile(db: Session, item: dict) -> None:
+    """Who the athlete is, captured from chat. Only the fields actually stated are
+    passed through — `set_profile` skips nulls, so 'call me Alex' can't blank the
+    pronouns they told us last week."""
+    fields = {k: item.get(k) for k in PROFILE_FIELDS if item.get(k) is not None}
+    if "birthdate" in fields:
+        # The extractor may hand back an age-derived date or a malformed string;
+        # a bad date must drop the field, never poison the whole profile write.
+        parsed = _parse_date(str(fields["birthdate"]))
+        if parsed is None:
+            fields.pop("birthdate")
+        else:
+            fields["birthdate"] = parsed
+    if fields:
+        set_profile(db, **fields)
 
 
 # ------------------------------------------------------------------ user state
