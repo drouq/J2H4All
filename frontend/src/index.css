@@ -538,3 +538,9 @@ section {
   margin-top: 0.4rem;
   line-height: 1.5;
 }
+
+/* --- first-run setup panel --- */
+.setup-steps { list-style: none; padding: 0; margin: 0.75rem 0; }
+.setup-steps li { padding: 0.35rem 0; border-bottom: 1px solid var(--line, #2a2a2a); font-size: 0.95rem; }
+.setup-steps li:last-child { border-bottom: none; }
+.setup-steps .small { margin-top: 0.15rem; }

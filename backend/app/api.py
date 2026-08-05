@@ -17,6 +17,7 @@ from .models import Heartbeat
 from .plan import generate as plan_generate
 from .plan import proposals as plan_proposals
 from .plan import store as plan_store
+from . import setup as app_setup
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -143,6 +144,19 @@ def draft_plan(user: str = Depends(current_user), db: Session = Depends(get_db))
     from .coach.schedule import local_today
 
     plan_store.ensure_seed(db)
+    # Refuse rather than periodize backwards from a race nobody chose. The output
+    # would look completely normal - that is exactly the problem, because the
+    # athlete has no way to tell a plan for their race from a plan for a
+    # placeholder by reading it. Only genuinely falsifying gaps block here; see
+    # setup.blockers for what deliberately does NOT.
+    blocked = app_setup.blockers(db)
+    if blocked:
+        raise HTTPException(status_code=409, detail={
+            "error": "setup_incomplete",
+            "message": "Finish setup before drafting a plan: " + "; ".join(
+                f"{s.label} - {s.detail}" for s in blocked),
+            "blockers": [s.key for s in blocked],
+        })
     try:
         payload = plan_generate.generate_onboarding_draft(db, local_today(db))
     except LLMNotConfigured as exc:
@@ -248,3 +262,68 @@ def backup_run(user: str = Depends(current_user), db: Session = Depends(get_db))
 # which can also raise a plan-change card); the web panel was dropped long before, so
 # these routes had no caller and just left an Opus-spending surface reachable by URL.
 # Re-adding a web chat = one route + a panel; the model layer is unchanged.
+
+
+# ---------------------------------------------------------------- first-run setup
+
+
+@router.get("/setup")
+def setup_status(user: str = Depends(current_user), db: Session = Depends(get_db)):
+    """What's done, what's next, and what blocks a plan. Read-only and never raises,
+    so it stays useful when the install is half-broken."""
+    return app_setup.view(db)
+
+
+class GoalIn(BaseModel):
+    format: str | None = None
+    race_date: str | None = None
+    loop_km: float | None = None
+    target_laps: int | None = None
+    distance_km: float | None = None
+    elevation_gain_m: float | None = None
+    target_time: str | None = None
+    floor_note: str | None = None
+    stretch_note: str | None = None
+
+
+@router.post("/setup/goal")
+def set_goal(payload: GoalIn, user: str = Depends(current_user), db: Session = Depends(get_db)):
+    """Set the A-race. Partial: only the fields sent are changed, so editing the date
+    can't blank the distance. `format` is normalized through the doctrine registry."""
+    try:
+        plan_store.set_goal(db, **payload.model_dump(exclude_none=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return plan_store.goal_view(db)
+
+
+class GarminTokenIn(BaseModel):
+    token: str
+
+
+@router.post("/setup/garmin-token")
+def set_garmin_token(payload: GarminTokenIn, user: str = Depends(current_user),
+                     db: Session = Depends(get_db)):
+    """Accept the base64 blob from `python -m app.garmin.login`.
+
+    Garmin blocks datacenter IPs on login, so a self-hoster has to run that command
+    at home. Asking them to then edit a host environment variable is the step most
+    likely to strand them; pasting it into their own single-user app is not. Stored
+    as an INTERNAL preference, so it never reaches the context panel or a prompt.
+
+    The token is validated by loading it, not by trusting it - a truncated paste
+    should fail here with a clear message rather than at 01:00 in a cron.
+    """
+    blob = (payload.token or "").strip()
+    if not blob:
+        raise HTTPException(status_code=422, detail="Token is empty.")
+    try:
+        import garth
+        garth.Client().loads(blob)
+    except Exception:
+        raise HTTPException(
+            status_code=422,
+            detail="That doesn't look like a valid Garmin token blob. Re-run "
+                   "`python -m app.garmin.login` and copy the whole GARTH_TOKEN value.")
+    ctx_store.stamp_meta(db, "garmin_bootstrap_token", blob)
+    return {"saved": True, "env_overrides": bool(get_settings().garth_token)}

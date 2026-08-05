@@ -3,6 +3,7 @@ import BackupPanel from "./Backup";
 import CalendarPanel from "./Calendar";
 import ContextPanel from "./Context";
 import PlanPanel from "./Plan";
+import SetupPanel from "./Setup";
 import TrendsPanel from "./Trends";
 import {
   fetchMe,
@@ -177,12 +178,14 @@ export default function App() {
           </div>
           <SyncCard />
           <nav className="tabs">
+            <a href="#setup">Setup</a>
             <a href="#plan">Plan</a>
             <a href="#trends">Trends</a>
             <a href="#calendar">Calendar</a>
             <a href="#context">Context</a>
             <a href="#backup">Backup</a>
           </nav>
+          <section id="setup"><PanelBoundary name="Setup"><SetupPanel /></PanelBoundary></section>
           <section id="plan"><PanelBoundary name="The plan"><PlanPanel /></PanelBoundary></section>
           <section id="trends"><PanelBoundary name="Trends"><TrendsPanel /></PanelBoundary></section>
           <section id="calendar"><PanelBoundary name="Calendar"><CalendarPanel /></PanelBoundary></section>

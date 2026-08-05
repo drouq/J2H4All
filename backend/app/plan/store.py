@@ -69,6 +69,7 @@ def _pdate(s, default=None):
 # race date is one person's goal silently becoming everyone's. See ROADMAP.md —
 # the onboarding flow replaces this seed with a proper wizard.
 PLACEHOLDER_HORIZON_DAYS = 182  # ~6 months: a plausible planning horizon
+PLACEHOLDER_FLOOR = "PLACEHOLDER GOAL — replace this with your real race"
 
 
 def ensure_seed(db: DbSession) -> None:
@@ -78,11 +79,68 @@ def ensure_seed(db: DbSession) -> None:
         db.add(Goal(
             format="backyard-ultra", loop_km=6.706, target_laps=24,
             race_date=date.today() + timedelta(days=PLACEHOLDER_HORIZON_DAYS),
-            floor_note="PLACEHOLDER GOAL — replace this with your real race",
+            floor_note=PLACEHOLDER_FLOOR,
             stretch_note=None,
             status="active", created_at=_utcnow(),
         ))
     db.commit()
+
+
+
+# Goal columns an athlete may set. `status` and `created_at` are ours; `format` is
+# validated against the doctrine registry rather than taken as free text.
+GOAL_FIELDS = ("format", "race_date", "loop_km", "target_laps", "distance_km",
+               "elevation_gain_m", "target_time", "floor_note", "stretch_note")
+
+
+def is_placeholder(goal) -> bool:
+    """True while the goal is still the one `ensure_seed` invented. The whole plan
+    is built backwards from the race date, so drafting against a placeholder
+    produces a confident plan for a race that doesn't exist."""
+    return goal is not None and (goal.floor_note or "").startswith("PLACEHOLDER")
+
+
+def set_goal(db: DbSession, **fields) -> Goal:
+    """Create or update the active A-goal. Skips nulls (same contract as the profile
+    and check-in upserts) so a partial edit can't blank the fields it didn't mention.
+
+    Setting any real field clears the placeholder marker — otherwise an athlete who
+    fills in their race would still be told their goal isn't configured."""
+    from ..coach import formats
+
+    unknown = set(fields) - set(GOAL_FIELDS)
+    if unknown:
+        raise ValueError(f"unknown goal field(s): {sorted(unknown)}")
+    ensure_seed(db)
+    goal = db.scalar(select(Goal).where(Goal.status == "active").limit(1))
+    real = {k: v for k, v in fields.items() if v is not None}
+    if "format" in real:
+        # Normalize through the registry so "marathon" becomes "road-marathon" and a
+        # typo lands on `generic` rather than silently coaching the wrong race.
+        real["format"] = formats.normalize(real["format"])
+    if "race_date" in real:
+        parsed = _pdate(real["race_date"])
+        if parsed is None:
+            raise ValueError(f"race_date is not a date: {real['race_date']!r}")
+        real["race_date"] = parsed
+    changing_format = "format" in real and real["format"] != goal.format
+    for key, value in real.items():
+        setattr(goal, key, value)
+    # Changing format must CLEAR the fields that belonged to the old one. Skip-nulls
+    # is right for editing within a format, but across formats it strands values that
+    # are meaningless in the new one — a backyard's target_laps survived a switch to
+    # marathon and the plan panel duly announced "your marathon - 24 laps".
+    if changing_format:
+        from ..coach import formats
+
+        keep = set(formats.get(real["format"]).goal_fields)
+        for stale in ("loop_km", "target_laps", "distance_km", "elevation_gain_m", "target_time"):
+            if stale not in keep and stale not in real:
+                setattr(goal, stale, None)
+    if real and is_placeholder(goal) and "floor_note" not in real:
+        goal.floor_note = None
+    db.commit()
+    return goal
 
 
 def goal_view(db: DbSession, today: date | None = None) -> dict:

@@ -16,6 +16,17 @@ import {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// Human label per race format (backend coach/formats/). This panel used to say
+// "days to the backyard" with a lap count for every athlete, which reads as
+// nonsense to a marathoner.
+const RACE_LABEL: Record<string, string> = {
+  "backyard-ultra": "the backyard",
+  "trail-ultra": "your trail ultra",
+  "road-ultra": "your ultra",
+  "road-marathon": "your marathon",
+  generic: "your race",
+};
+
 // Browser-local today as YYYY-MM-DD (plan dates are local, and toISOString would
 // shift a UTC+8 evening back a day). Used to flag today's session.
 function localToday(): string {
@@ -188,8 +199,16 @@ export default function PlanPanel() {
       {g && (
         <div className="goalbar">
           <span className="big">{g.days_to_race}</span>
+          {/* Describe the race the athlete actually entered. This used to say "the
+              backyard" with a lap count for everyone, which read as nonsense to a
+              marathoner. Falls back to the bare date when nothing is filled in. */}
           <span className="muted">
-            days to the backyard — {g.target_laps} laps, {g.race_date}
+            days to {RACE_LABEL[g.format] ?? "your race"}
+            {g.target_laps ? ` — ${g.target_laps} laps` : ""}
+            {g.distance_km ? ` — ${g.distance_km} km` : ""}
+            {g.elevation_gain_m ? ` / ${g.elevation_gain_m} m` : ""}
+            {g.target_time ? ` — target ${g.target_time}` : ""}
+            {`, ${g.race_date}`}
           </span>
           {goal!.secondary_races.map((r) => (
             <div key={r.name} className="muted small">

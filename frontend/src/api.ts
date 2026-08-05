@@ -112,8 +112,11 @@ export async function confirmContext(items: ContextItem[]): Promise<ContextSnaps
 export type GoalView = {
   goal: {
     format: string;
-    loop_km: number;
-    target_laps: number;
+    loop_km: number | null;
+    target_laps: number | null;
+    distance_km: number | null;
+    elevation_gain_m: number | null;
+    target_time: string | null;
     race_date: string;
     days_to_race: number;
     floor_note: string | null;
@@ -202,6 +205,9 @@ export async function fetchProposals(): Promise<Proposal[]> {
 export async function draftPlan(): Promise<Proposal> {
   // Opus generation — can take up to a minute.
   const res = await fetch("/api/plan/draft", { method: "POST" });
+  // 409 = setup incomplete. The backend refuses rather than periodizing backwards
+  // from a race nobody chose, so surface its message instead of a bare status.
+  if (res.status === 409) throw new Error((await res.json()).detail?.message ?? "Finish setup first.");
   if (res.status === 502)
     throw new Error((await res.json()).detail ?? "The coach produced a malformed draft — try again.");
   return jsonOrThrow(res, "draft");
@@ -348,4 +354,56 @@ export async function runBackup(): Promise<{ file_id: string; name: string }> {
   const res = await fetch("/api/backup/run", { method: "POST" });
   if (res.status === 409) throw new Error((await res.json()).detail ?? "Reconnect Google to enable backups");
   return jsonOrThrow(res, "backup run");
+}
+
+// --- First-run setup (ROADMAP §3) ---
+
+export type SetupStep = {
+  key: string;
+  label: string;
+  done: boolean;
+  detail: string;
+  action: string;
+  blocking: boolean;
+};
+
+export type SetupStatus = {
+  steps: SetupStep[];
+  complete: boolean;
+  blockers: string[];
+  next: string | null;
+};
+
+export type GoalIn = {
+  format?: string;
+  race_date?: string;
+  loop_km?: number | null;
+  target_laps?: number | null;
+  distance_km?: number | null;
+  elevation_gain_m?: number | null;
+  target_time?: string | null;
+};
+
+export async function fetchSetup(): Promise<SetupStatus> {
+  return jsonOrThrow(await fetch("/api/setup"), "setup status");
+}
+
+export async function saveGoal(goal: GoalIn): Promise<unknown> {
+  const res = await fetch("/api/setup/goal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(goal),
+  });
+  if (res.status === 422) throw new Error((await res.json()).detail ?? "Invalid goal");
+  return jsonOrThrow(res, "save goal");
+}
+
+export async function saveGarminToken(token: string): Promise<{ saved: boolean; env_overrides: boolean }> {
+  const res = await fetch("/api/setup/garmin-token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (res.status === 422) throw new Error((await res.json()).detail ?? "Invalid token");
+  return jsonOrThrow(res, "save garmin token");
 }

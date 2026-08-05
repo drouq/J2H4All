@@ -37,10 +37,10 @@ Two honest caveats:
    have not been run against a real build or a prompt eval. Treat them as a good starting
    point to tune — [`coach/formats/`](backend/app/coach/formats/) is one small file per
    format, deliberately easy to edit.
-2. **There is no onboarding flow yet.** A fresh install seeds a *placeholder* goal you
-   must replace, and your athlete profile (name, pronouns, history, physiology, diet,
-   constraints) is entered through conversation rather than a wizard. See
-   [ROADMAP.md](ROADMAP.md).
+2. **Onboarding is a status list, not a guided wizard.** The Setup panel tells you what's
+   done, what's missing and what to do about each gap, and lets you set your race and
+   paste your Garmin token. It won't hold your hand through the steps in order. Telegram
+   still needs a chat ID found by hand. See [ROADMAP.md](ROADMAP.md).
 
 **No personal data from the original install ships in this repo** — no athlete, no race,
 no medical history, no credentials. Every identifier is yours to fill in.
@@ -61,6 +61,7 @@ The software comes with no warranty of any kind — see [LICENSE](LICENSE).
 | **Approval gate** | Nothing side-effectful happens without your explicit tap. Every calendar write, watch push and plan revision is *proposed* first. |
 | **Calendar + watch** | A dedicated Google Calendar, one event per session, with ✅ / ⚠️ / ❌ completion marking. Approved runs also become scheduled Garmin structured workouts. |
 | **Adaptation loop** | Morning brief, evening debrief (feel + life factors, one tap each), Sunday weekly review that re-plans the next 30 days, and red-flag pings on illness/fatigue signals. |
+| **Setup** | A first-run panel: what's configured, what's missing, what to do about it. Sets your race, and takes a pasted Garmin token so you never edit a host environment variable. Refuses to draft a plan against a race you haven't set. |
 | **Web app** | Plan, Trends (load balance, volume vs plan, heat acclimation, bloods), Calendar, Context, Backup. Monthly JSON export to your own Google Drive. |
 
 ## Architecture in one line

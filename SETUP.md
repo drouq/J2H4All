@@ -13,9 +13,10 @@ cd backend && python -m app.jobs doctor
 It never writes anything and makes no network calls, so it's safe to run at any time.
 Exit code 0 means clean, 1 means warnings, 2 means something is broken.
 
-> **Read [ROADMAP.md](ROADMAP.md) before you invest the two hours.** The coaching doctrine
-> is still backyard-ultra specific and there is no onboarding wizard. If you're training
-> for a road marathon, you will want to hand-edit `backend/app/coach/doctrine.py`.
+> **Read [ROADMAP.md](ROADMAP.md) before you invest the two hours.** The coach has doctrine
+> for backyard ultras, trail ultras, road ultras and marathons — but only the backyard
+> format has been validated against a real athlete's season, and onboarding is a status
+> panel rather than a guided wizard.
 
 ---
 
@@ -114,7 +115,12 @@ python -m app.garmin.login
 ```
 
 It prompts for your Garmin email, password and MFA code, then writes `GARTH_TOKEN` into
-`backend/.env`. Copy that value into your deployment's environment.
+`backend/.env`.
+
+Then either copy that value into your deployment's environment, **or — easier — paste it
+into the Setup panel in the running app.** The app stores it internally (never exposed to
+the coach or the context panel) and validates it on paste, so a truncated copy fails
+immediately rather than at 01:00 in a cron. The environment variable wins if both are set.
 
 - Keep `garth` pinned at **0.6.3**. Newer versions use a mobile login flow that Cloudflare
   blocks.
@@ -166,7 +172,8 @@ enough if you follow the polling rule in §2.
 
 ## 7. First run
 
-1. `python -m app.jobs doctor` — everything should be `ok` or an intentional warning.
+1. `python -m app.jobs doctor` — everything should be `ok` or an intentional warning. The
+   **Setup panel** in the web app shows the same picture, plus what to do about each gap.
 2. Sign in to the web app with your allowlisted Google account.
 3. Import your history:
    ```bash
@@ -177,8 +184,10 @@ enough if you follow the polling rule in §2.
    your pronouns, your age, and — most valuable — anything that makes your *data* read
    wrong rather than your training: restless legs wrecking your sleep score while recovery
    is fine, night shifts, medication that caps your heart rate.
-5. **Set your real race.** A fresh install carries a clearly-labelled placeholder goal. The
-   entire plan is built backwards from your race date, so replace it before drafting a plan.
+5. **Set your real race** in the Setup panel — format, date, and the fields that format
+   uses. A fresh install carries a clearly-labelled placeholder, and the app **refuses to
+   draft a plan** until you replace it: the whole plan is periodized backwards from your
+   race date, and a plan built for a placeholder looks entirely normal.
 6. Draft your first plan from the web app, and approve it.
 
 ## Troubleshooting

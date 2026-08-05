@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 
 # backend/ on the path so `import app...` works when pytest runs from anywhere.
@@ -36,7 +37,14 @@ get_settings.cache_clear()
 
 @pytest.fixture
 def db():
-    engine = create_engine("sqlite://", future=True)
+    # StaticPool + check_same_thread=False so ONE in-memory database is shared across
+    # threads. Needed because fastapi's TestClient runs the app in a worker thread:
+    # without this, any test that overrides get_db with this session dies on SQLite's
+    # thread affinity rather than on the behaviour it meant to check.
+    engine = create_engine(
+        "sqlite://", future=True,
+        connect_args={"check_same_thread": False}, poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine, future=True)
     s = Session()

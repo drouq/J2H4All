@@ -269,6 +269,10 @@ _INTERNAL_PREF_KEYS = {
     "pending_context_items", "drive_backup_folder_id", "last_drive_export",
     "last_push_calendar_at", "last_push_garmin_at", "awaiting_lifestyle_reply",
     "awaiting_debrief_reply", "awaiting_deviation_reason",
+    # Garmin bootstrap blob pasted through the web setup panel. Internal for the
+    # same reason as the rotating token: it is a credential, and must never reach
+    # the context panel or an LLM prompt.
+    "garmin_bootstrap_token",
 }
 _INTERNAL_PREF_PREFIXES = ("alert_",)
 

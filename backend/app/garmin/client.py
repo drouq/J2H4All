@@ -22,18 +22,28 @@ class GarminClient:
     """Thin wrapper over garth: token load, throttle, retry. No parsing here."""
 
     _TOKEN_KEY = "garmin_oauth2_token"  # rotating OAuth2 token, persisted in Preference
+    _BOOTSTRAP_KEY = "garmin_bootstrap_token"  # login blob, pasted via the setup panel
 
     def __init__(self, db=None) -> None:
         settings = get_settings()
-        if not settings.garth_token:
+        # The login blob can arrive two ways. The environment variable wins, so an
+        # operator-set value is never silently overridden by something pasted into
+        # the web app. The database fallback exists because Garmin blocks datacenter
+        # IPs on login: a self-hoster has to run `app.garmin.login` at home, and
+        # asking them to then edit a host environment variable is the single step
+        # most likely to strand them. Pasting it into their own app is not.
+        blob = settings.garth_token or self._load_bootstrap(db)
+        if not blob:
             raise GarminAuthError(
-                "GARTH_TOKEN is not set. Run: python -m app.garmin.login"
+                "No Garmin token. Run `python -m app.garmin.login` on your home "
+                "machine (Garmin blocks datacenter IPs), then paste the token into "
+                "the app or set GARTH_TOKEN."
             )
         from . import impersonate
         impersonate.install()  # curl_cffi Chrome-TLS exchange (residential-only fallback)
         self._client = garth.Client(session=impersonate.ImpersonatedSession())
         try:
-            self._client.loads(settings.garth_token)
+            self._client.loads(blob)
         except Exception as exc:  # corrupted/expired token blob
             raise GarminAuthError(f"GARTH_TOKEN could not be loaded: {exc}") from exc
         self._db = db
@@ -64,6 +74,20 @@ class GarminClient:
             logger.info("OAuth2 refreshed via diauth (rolling refresh token)")
         except Exception as exc:
             logger.warning("diauth refresh failed (%s); will fall back to OAuth1 exchange", exc)
+
+    @classmethod
+    def _load_bootstrap(cls, db) -> str | None:
+        """The pasted login blob, if one was saved. Never raises: a broken read here
+        must surface as the normal 'no token' error, not a 500."""
+        if db is None:
+            return None
+        try:
+            from sqlalchemy import select
+            from ..models import Preference
+            pref = db.scalar(select(Preference).where(Preference.key == cls._BOOTSTRAP_KEY))
+            return pref.value if pref else None
+        except Exception:  # noqa: BLE001
+            return None
 
     def _load_token(self):
         if self._db is None:

@@ -62,30 +62,43 @@ Still open here:
 - Nothing lets an athlete SET their format yet except editing the database — it needs to
   join the goal step of onboarding (§3).
 
-## 3. Onboarding *(blocks everyone; painful without it)*
+## 3. Onboarding — mostly done
 
-A fresh install seeds a **placeholder goal** (`plan/store.py::ensure_seed`) that must be
-replaced by hand, and nothing guards plan generation against a half-configured install — it
-will happily draft a plan for the placeholder.
+A **Setup panel** is the first thing in the app. It reports every step (AI key, profile,
+race, Garmin, history, calendar, Telegram, plan), says what to DO about each gap, and
+distinguishes what merely degrades the coaching from what makes it wrong.
 
-**Wanted:** a first-run wizard — sign in → connect Garmin → Calendar → Telegram → athlete
-profile → goal and races → preferences → full history import → first plan draft. Plus a
-guard that refuses plan generation until a profile and a real goal exist.
+**Setting your race** — format, date, and only the fields that format actually uses.
+Asking a marathoner for a lap count is how a setup form teaches someone the app isn't
+really for them. `format` is normalized through the doctrine registry, so "marathon"
+lands on marathon doctrine and a typo lands on `generic`. Switching format clears the
+previous format's fields.
 
-Two specific bits of UX are worth more than any amount of documentation, because they
-remove the two steps most likely to strand someone:
+**The plan-draft guard.** `POST /api/plan/draft` returns 409 while a blocker stands, and
+names it. Only two things block: no API key, and a placeholder race. A plan periodized
+backwards from a date nobody chose looks completely normal — that is exactly why refusing
+beats producing it, because the athlete cannot tell the difference by reading it.
+Deliberately NOT blocking: Garmin, history, calendar, Telegram, profile. Those degrade a
+plan without falsifying it, and refusing there would be paternalistic.
 
-- **Garmin token paste.** The wizard can't do the login server-side (see the Cloudflare
-  block in ARCHITECTURE.md), but it *can* accept the pasted token blob. The runtime
-  credential is already a database-stored rotating token, so accepting it through the web
-  form means **nobody ever edits a host environment variable for Garmin.**
-- **Telegram pairing code.** Instead of making people hunt for a numeric chat ID: the web
-  shows a code, they message it to their bot, the bot binds that chat.
+**Garmin token paste.** `POST /api/setup/garmin-token` accepts the blob from
+`python -m app.garmin.login`, validates it by loading it (a truncated paste fails there
+with a clear message rather than at 01:00 in a cron), and stores it as an *internal*
+preference so it never reaches the context panel or a prompt. The environment variable
+still wins if set. **Nobody has to edit a host environment variable for Garmin any more** —
+that was the step most likely to strand a self-hoster.
 
-> ⚠️ The pairing code moves the single-user Telegram gate from an environment variable to
-> the database. That is one of the two hard rules. The gate must stay exactly as strict —
-> only its *source* changes, with the environment variable keeping precedence — and it
-> needs explicit test coverage before it ships. Do not slip this in as wizard plumbing.
+Still open:
+- **Telegram pairing code** — show a code in the web app, have the athlete message it to
+  their bot, bind that chat. Deliberately NOT built yet: it moves the single-user Telegram
+  gate from an environment variable into the database, and that gate is one of the two
+  hard rules. The gate must stay exactly as strict (env keeping precedence) and needs its
+  own test coverage before it ships. It is worth doing — hunting a numeric chat ID in
+  `getUpdates` is a genuinely bad first experience — but not worth slipping in as wizard
+  plumbing.
+- A guided step-by-step flow rather than a status list. The list is honest and useful;
+  a wizard that walks someone through in order would be better.
+- Triggering the history import from the web app (it is a CLI job today).
 
 ## 4. Setup documentation — ✅ DONE
 
