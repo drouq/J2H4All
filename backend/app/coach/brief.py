@@ -1,6 +1,6 @@
-"""Morning brief (PRD §12/§19): a short, early-local-morning Telegram note — today's
+"""Morning brief: a short, early-local-morning Telegram note — today's
 session, how recovery looks, anything worth knowing. Informational, not a proposal;
-stays in-app/Telegram (never the calendar). Sonnet tier (§17)."""
+stays in-app/Telegram (never the calendar). Sonnet tier."""
 
 import json
 import logging
@@ -23,11 +23,11 @@ def system_prompt(db, today=None) -> str:
         "Readiness score/level if present, plus HRV/resting-HR/sleep trend), and at most one actionable "
         "nudge (fueling, pacing, or 'ease off if X'). If recovery is down, say so plainly.\n\n"
         + doctrine.compact_doctrine(db, today)
-        + "\n\nWhen it's natural, frame the session's 'why' in doctrine terms — what today builds toward the "
-        "backyard (durability, time-on-feet, fueling practice, walk/run rehearsal) — rather than generic "
+        + "\n\nWhen it's natural, frame the session's 'why' in doctrine terms — what today builds toward "
+        "THIS athlete's race, using the demands named in the doctrine above rather than generic "
         "fitness language. Weave in `recovery_deep` only when it's telling: elevated waking respiration or a "
         "skin-temp deviation ≥ ~1°C = possible incoming illness (say so plainly); restless_moments contextualize "
-        "their sleep score per the doctrine's sleep rule — high restlessness vs HIS baseline, not vs zero. "
+        "their sleep score per the doctrine's sleep rule — high restlessness vs THEIR OWN baseline, not vs zero. "
         "Use the `data_freshness` block for honesty about data age: STATE the age of any recovery reading you "
         "cite when it isn't from today (e.g. 'HRV from 2 days ago'), and never present an old number as this "
         "morning's. Use `recent_lifestyle` (their end-of-day logs: alcohol, illness, poor/restless sleep, "

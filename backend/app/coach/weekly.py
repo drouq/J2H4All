@@ -1,9 +1,7 @@
-"""Weekly review (PRD §12): the main adaptation beat, Sunday evening local. Opus
-(§17) reviews the week's execution + recovery trend and *proposes* next-block
-session adjustments through the approval flow (§11) — never applied silently.
+"""Weekly review: the main adaptation beat, Sunday evening local. Opus reviews the week's execution + recovery trend and *proposes* next-block
+session adjustments through the approval flow — never applied silently.
 
-Because the 30-day detail window means this can revise sessions they've already seen
-(§9), the proposal must carry change-transparency: what changed and why.
+Because the 30-day detail window means this can revise sessions they've already seen, the proposal must carry change-transparency: what changed and why.
 """
 
 import json
@@ -25,7 +23,7 @@ REVIEW_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string", "description": "3-5 sentence review for a Telegram/web card: how the week went (execution + recovery) and what you propose next. Coach voice."},
-        "change_note": {"type": "string", "description": "Explicit 'what changed and why' vs the sessions they've already seen (change-transparency, §9). If nothing material changes, say so."},
+        "change_note": {"type": "string", "description": "Explicit 'what changed and why' vs the sessions they've already seen (change-transparency). If nothing material changes, say so."},
         "sessions": {
             "type": "array",
             "description": "The revised detailed sessions for the coming ~4 weeks — the full rolling window you were shown (include rest days). Same date format. Keep aligned with the macro phase.",
@@ -124,7 +122,7 @@ def build_facts(db: DbSession, today: date, horizon_days: int = 30) -> dict | No
 def run_review(db: DbSession, today: date | None = None, horizon_days: int = 30):
     """Generate a weekly-review proposal (pending). Returns (proposal, summary) or None.
 
-    The horizon matches the PRD §9 rolling ~30-day detail window: the review must
+    The horizon matches the rolling ~30-day detail window: the review must
     SEE and re-propose the whole remaining window, or the unreviewed tail survives
     supersede and can contradict the new block at the boundary."""
     if today is None:
@@ -157,7 +155,7 @@ def run_review(db: DbSession, today: date | None = None, horizon_days: int = 30)
         logger.info("Weekly review skipped: LLM not configured")
         return None
     if not out.get("sessions"):
-        # Degrade loudly (§2.4): raising routes into the scheduler's cron-failure
+        # Degrade loudly: raising routes into the scheduler's cron-failure
         # Telegram alert instead of silently sending an empty review card.
         raise RuntimeError("Weekly review produced no sessions after retry; not creating an empty proposal")
 

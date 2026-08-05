@@ -1,4 +1,4 @@
-"""The single-user hard gate (PRD §2.6/§3) — the other load-bearing rule.
+"""The single-user hard gate — the other load-bearing rule.
 
 Web = Google OAuth + a one-email allowlist; Telegram = one chat-ID lock. The
 approval gate has had thorough coverage since Phase 3; this one had NONE until
@@ -165,10 +165,10 @@ def test_a_valid_production_config_boots():
              telegram_chat_id="1", telegram_webhook_secret="s").validate_production()
 
 
-# --------------------------------------------------------------------- model tiering (§17)
+# --------------------------------------------------------------------- model tiering
 
 def test_heavy_surfaces_are_opus_and_frequent_ones_are_sonnet():
-    """PRD §17 tiering, asserted as an invariant rather than exact IDs so a version
+    """Model tiering, asserted as an invariant rather than exact IDs so a version
     bump stays a one-line change — but a heavy surface quietly dropping to the cheap
     tier (or a per-minute surface jumping to Opus) fails here."""
     from app.config import DEFAULT_MODELS

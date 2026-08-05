@@ -1,4 +1,4 @@
-"""Thin Google Calendar v3 REST client over httpx (PRD §10).
+"""Thin Google Calendar v3 REST client over httpx.
 
 Kept dependency-free (no google-api-python-client) and deliberately narrow: it
 only ever creates/touches our own dedicated "J2H4All Training" calendar and its

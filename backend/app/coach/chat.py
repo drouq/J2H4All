@@ -1,8 +1,8 @@
-"""Coaching conversation (PRD §13): the depth surface. Claude reasons natively
+"""Coaching conversation: the depth surface. Claude reasons natively
 about fueling, recovery, race strategy, and taper over the store — context +
-prompting, not new modules. Opus tier (§17); this is where coaching quality lives.
+prompting, not new modules. Opus tier; this is where coaching quality lives.
 
-Hard rule (§13): the coach stays in the athletic-nutrition/training lane. It may
+Hard rule: the coach stays in the athletic-nutrition/training lane. It may
 flag a marker trend and suggest raising it with a doctor, but never diagnoses or
 prescribes dosages/supplement regimens as medical instruction.
 """
@@ -55,7 +55,7 @@ def system_prompt(db, today: date | None = None) -> str:
 def _context_block(db: DbSession, today: date) -> str:
     from ..plan.summary import context_for_prompt, garmin_summary
 
-    # Token discipline (PRD §14): goal facts live in the doctrine (system prompt),
+    # Token discipline: goal facts live in the doctrine (system prompt),
     # latest-per-marker bloods live in life_context — so here bloods carry TREND
     # depth only (last 5 readings per marker), and garmin_summary is called
     # directly instead of computing the whole weekly-review bundle to keep 1 key.
@@ -106,7 +106,7 @@ def ask_with_proposal(db: DbSession, question: str, surface: str = "telegram",
                       today: date | None = None):
     """A coaching turn, grounded in the current store, which may also raise a
     plan-change proposal. Returns (answer_text, Proposal | None) — the caller sends
-    the approval card, so the §11 gate holds. (A text-only `ask()` existed for the
+    the approval card, so the approval gate holds. (A text-only `ask()` existed for the
     web endpoint; both were removed with it on 2026-08-03.)"""
     if today is None:
         from .schedule import local_today

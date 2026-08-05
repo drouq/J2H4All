@@ -1,4 +1,4 @@
-"""Check-in building blocks (PRD §12): the feel-score model (`Checkin`), the one-tap
+"""Check-in building blocks: the feel-score model (`Checkin`), the one-tap
 presets (`QUICK` → `record_quick`), the conflict-safe `_upsert`, and the shared
 windowed-await machinery (`set_awaiting` / `awaiting_active` / `clear_awaiting` /
 `looks_like_question`, keyed so other prompts reuse it). The live prompt is the merged

@@ -1,16 +1,17 @@
-"""Per-second activity streams → durability metrics (PRD §7, flagged enhancement).
+"""Per-second activity streams → durability metrics.
 
-A backyard ultra is won on metronomic durability: holding the same easy effort loop
-after loop without drift. The per-activity summary can't show that; the intra-run
-time-series can. From Garmin's activity `details` stream we derive a compact rollup
-(never the raw per-second firehose, per §14):
+Durability - holding the same effort without drifting - is what decides every
+endurance race, whichever format. The per-activity summary can't show it; the
+intra-run time-series can. From Garmin's activity `details` stream we derive a compact rollup
+(never the raw per-second firehose — the coach reasons over rollups, not dumps):
 
 - **aerobic decoupling** — does HR creep up at constant pace? The first-vs-second-half
   drop in speed-per-beat efficiency. The single best aerobic-durability marker.
 - **HR drift (bpm)** — plain average-HR rise, half to half.
-- **pacing consistency** — per-km pace coefficient of variation. the athlete runs without
-  auto-laps (one lap for the whole run), so we split the distance stream ourselves;
-  this is the lap-to-lap steadiness that decides a backyard.
+- **pacing consistency** — per-km pace coefficient of variation. Athletes often run
+  without auto-laps (one lap for the whole run), so we split the distance stream
+  ourselves. Low variance late in a run is evenness under fatigue: the metronomic
+  repeatability a backyard needs, and the pace discipline a marathon needs.
 
 `compute_stream_metrics` is a pure function of the details payload, so it's testable
 and reusable by the live sync and the backfill job alike.

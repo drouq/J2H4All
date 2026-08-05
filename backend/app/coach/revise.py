@@ -1,4 +1,4 @@
-"""The 'Edit' arm of the approval flow (PRD §11): the user taps Edit on a card and
+"""The 'Edit' arm of the approval flow: the user taps Edit on a card and
 replies with an instruction; the coach redrafts the proposal (Sonnet) and sends a
 fresh card. Pending-edit state is persisted (a preference row) so it survives a
 restart between the tap and the reply."""

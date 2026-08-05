@@ -1,7 +1,7 @@
-"""Red-flag proactivity (PRD §12): between weekly reviews the coach stays quiet
+"""Red-flag proactivity: between weekly reviews the coach stays quiet
 UNLESS something acute appears — HRV crash, resting-HR spike, a flagged run, or
 logged pain. Then it proactively pings Telegram with a *proposed* conservative
-change (never silently applied — §11). Deterministic detection first; Sonnet only
+change (never silently applied —). Deterministic detection first; Sonnet only
 drafts the adjustment when a flag actually trips and nothing is already pending."""
 
 import json
@@ -39,7 +39,7 @@ ADJUST_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string", "description": "2-3 sentences for a Telegram card: what you saw and what you propose. Coach voice."},
-        "change_note": {"type": "string", "description": "Plain 'what changed and why' vs the current plan (change-transparency, §9)."},
+        "change_note": {"type": "string", "description": "Plain 'what changed and why' vs the current plan (change-transparency)."},
         "sessions": {
             "type": "array",
             "description": "The revised sessions for the affected next few days (same dates you were given). Conservative — reduce load, protect recovery.",

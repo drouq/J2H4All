@@ -1,10 +1,10 @@
-"""Coaching doctrine — the single source of the coach's endurance brain (PRD §2.5, §13).
+"""Coaching doctrine — the single source of the coach's endurance brain.
 
 Every LLM prompt surface composes its system prompt from the blocks here, so the
 coaching knowledge lives in ONE place instead of being re-written per prompt (and
 drifting). To tune the coach, edit this file (shared) or coach/formats/ (per race).
 
-Two tiers (PRD §17):
+Two tiers:
 - full_doctrine(db)    — Opus surfaces (plan generation, weekly review, coaching
                          chat): the complete training doctrine; pass
                          execution=True (chat/strategy) to add race-day doctrine.
@@ -275,7 +275,7 @@ implying the rolling figure is today's."""
 
 
 def timezone_line(db) -> str:
-    """The athlete's clock (PRD §16: store UTC, render LOCAL). Stated on every
+    """The athlete's clock (store UTC, render LOCAL). Stated on every
     doctrine surface because the store is UTC end-to-end: a raw UTC hour quoted at
     them reads hours wrong in a far-from-UTC zone. Rendered from their configured zone — which
     they set by chat ('I'm in London') — so it follows them when they travel; never

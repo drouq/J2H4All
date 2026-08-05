@@ -42,7 +42,7 @@ def heartbeat(user: str = Depends(current_user), db: Session = Depends(get_db)):
 
 @router.post("/sync")
 def start_sync(mode: str = "incremental", user: str = Depends(current_user)):
-    """On-demand 'Sync now' (PRD §7). Runs in a background thread; poll /api/sync/status."""
+    """On-demand 'Sync now'. Runs in a background thread; poll /api/sync/status."""
     if mode not in ("incremental", "full"):
         raise HTTPException(status_code=422, detail="mode must be 'incremental' or 'full'")
     if not get_settings().garmin_sync_enabled:
@@ -79,13 +79,13 @@ def get_context(user: str = Depends(current_user), db: Session = Depends(get_db)
 def extract_context(
     body: ExtractRequest, user: str = Depends(current_user), db: Session = Depends(get_db)
 ):
-    """Eponge step 1 (PRD §19): propose typed items from free text. Writes nothing."""
+    """Eponge step 1: propose typed items from free text. Writes nothing."""
     if not body.text.strip():
         return {"items": []}
     state = ctx_store.get_or_create_state(db)
     from .coach.schedule import local_today
     try:
-        # Anchor relative dates ("tomorrow") on HIS local day (PRD §16), like the
+        # Anchor relative dates ("tomorrow") on HIS local day, like the
         # Telegram arm — a UTC anchor mis-dates windows/injuries in their 00:00-08:00 window.
         items = ctx_extract.extract_items(body.text, local_today(db), state.timezone)
     except LLMNotConfigured as exc:
@@ -97,7 +97,7 @@ def extract_context(
 def confirm_context(
     body: ConfirmRequest, user: str = Depends(current_user), db: Session = Depends(get_db)
 ):
-    """Eponge step 2 (PRD §19): write the user-confirmed items."""
+    """Eponge step 2: write the user-confirmed items."""
     applied = ctx_store.apply_items(db, body.items, source="chat")
     return {"applied": applied, "context": ctx_store.snapshot(db)}
 
@@ -106,7 +106,7 @@ def confirm_context(
 async def parse_bloods(
     file: UploadFile = File(...), user: str = Depends(current_user), db: Session = Depends(get_db)
 ):
-    """PDF blood report → proposed marker items for confirm (PRD §19)."""
+    """PDF blood report → proposed marker items for confirm."""
     if (file.content_type or "") not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(status_code=415, detail="Expected a PDF")
     data = await file.read()
@@ -139,8 +139,8 @@ def get_plan(user: str = Depends(current_user), db: Session = Depends(get_db)):
 
 @router.post("/plan/draft")
 def draft_plan(user: str = Depends(current_user), db: Session = Depends(get_db)):
-    """Draft-first onboarding (PRD §14): Opus generates a macro plan + first 30-day
-    block, saved as a PENDING proposal. Nothing is written until approval (§11)."""
+    """Draft-first onboarding: Opus generates a macro plan + first 30-day
+    block, saved as a PENDING proposal. Nothing is written until approval."""
     from .coach.schedule import local_today
 
     plan_store.ensure_seed(db)
@@ -209,7 +209,7 @@ def revise_proposal(
     proposal_id: int, body: ReviseRequest, user: str = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    """Correct a proposal in conversation (PRD §11/§14): redraft it per a free-text
+    """Correct a proposal in conversation: redraft it per a free-text
     instruction and return the fresh proposal. The old one is superseded."""
     from .coach import revise as coach_revise
 
@@ -237,7 +237,7 @@ def trends(user: str = Depends(current_user), db: Session = Depends(get_db)):
     return trends_mod.build(db)
 
 
-# ---------------------------------------------------------------- Drive backup (Phase 6, §15)
+# ---------------------------------------------------------------- Drive backup (Phase 6)
 
 @router.get("/backup/status")
 def backup_status(user: str = Depends(current_user), db: Session = Depends(get_db)):

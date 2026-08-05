@@ -5,7 +5,7 @@ on its date, so the watch proposes it with pace/HR-zone targets. Mirrors the
 Google Calendar pattern exactly: store is truth, stable ids (`garmin_workout_id`
 / `garmin_schedule_id`), update-in-place never duplicate, and it only ever runs
 from an explicit user action — proposal approval or the manual sync button
-(PRD §2.3 extended to this surface; no silent writes to the Garmin account).
+(extended to this surface; no silent writes to the Garmin account).
 
 Feature-flagged via GARMIN_WORKOUT_PUSH_ENABLED (default off).
 """

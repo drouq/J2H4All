@@ -1,4 +1,4 @@
-"""Calendar connect + management routes (PRD §10).
+"""Calendar connect + management routes.
 
 - /auth/calendar/connect  → start the one-time offline consent (authed)
 - /auth/calendar/callback → capture + store the refresh token
@@ -8,7 +8,7 @@
 
 The manual /api/calendar/sync is the explicit-approval path for pushing an
 already-approved plan (the button click is the authorization). Proposal approval
-covers the in-flow case (PRD §11.4). Nothing else writes to the calendar.
+covers the in-flow case. Nothing else writes to the calendar.
 """
 
 import logging
@@ -85,7 +85,7 @@ def status(user: str = Depends(current_user), db: Session = Depends(get_db)):
         "connected": connected,
         "calendar_id": state.training_calendar_id,
         "has_unsynced_sessions": unsynced is not None,
-        # Last successful push, rendered on their local clock (PRD §16), for each target.
+        # Last successful push, rendered on their local clock, for each target.
         "last_calendar_push": _local_stamp(db, "last_push_calendar_at"),
         "last_garmin_push": _local_stamp(db, "last_push_garmin_at"),
     }

@@ -1,4 +1,4 @@
-"""Adaptation signals (PRD §12): everything the coach weighs to read the athlete —
+"""Adaptation signals: everything the coach weighs to read the athlete —
 planned-vs-actual, load, recovery trend, subjective check-ins, and the calendar
 reality ahead (treadmill windows, B-race proximity). Compact for prompts.
 """
@@ -305,7 +305,7 @@ def latest_markers(db: DbSession) -> dict:
 def data_freshness(db: DbSession, today: date) -> dict:
     """How current the recovery inputs are, so the brief can state each reading's age
     and nudge a watch-sync when this morning's overnight data isn't in Garmin yet
-    (the athlete typically syncs post-activity, not every morning — PRD §7)."""
+    (the athlete typically syncs post-activity, not every morning —)."""
     from ..models import FitnessMarker
 
     def latest_wellness_date(col):

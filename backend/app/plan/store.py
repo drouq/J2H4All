@@ -1,5 +1,5 @@
 """Goal/plan store: seed known facts, apply approved plans, link results, read
-the active plan (PRD §8/§9/§14). Writes here happen only from approved proposals."""
+the active plan. Writes here happen only from approved proposals."""
 
 import logging
 from collections import defaultdict
@@ -58,7 +58,7 @@ def _pdate(s, default=None):
         return default
 
 
-# ------------------------------------------------------------------ seed (PRD §8/§14)
+# ------------------------------------------------------------------ seed
 
 # A fresh install has no race yet. Rather than crash every caller that assumes a
 # Goal row exists, seed an obviously-unconfigured PLACEHOLDER and let the athlete
@@ -148,7 +148,7 @@ def goal_view(db: DbSession, today: date | None = None) -> dict:
     ensure_seed(db)
     goal = db.scalar(select(Goal).where(Goal.status == "active").limit(1))
     races = db.scalars(select(SecondaryRace).order_by(SecondaryRace.date)).all()
-    today = today or local_today(db)  # their local day (PRD §16), not server UTC
+    today = today or local_today(db)  # their local day, not server UTC
     return {
         "goal": {
             "format": goal.format, "loop_km": goal.loop_km, "target_laps": goal.target_laps,
@@ -167,7 +167,7 @@ def goal_view(db: DbSession, today: date | None = None) -> dict:
     }
 
 
-# ------------------------------------------------------------------ apply approved plan (§11)
+# ------------------------------------------------------------------ apply approved plan
 
 def apply_macro_plan(db: DbSession, payload: dict) -> int:
     """Supersede any active macro plan and write the new one. Returns new id."""
@@ -191,14 +191,14 @@ def apply_macro_plan(db: DbSession, payload: dict) -> int:
 def apply_sessions(db: DbSession, sessions: list[dict], macro_plan_id: int | None) -> int:
     """Supersede planned sessions in the covered date range, then write the new set.
 
-    Change-transparency (§11) lives in the proposal/approval layer; here we just
+    Change-transparency lives in the proposal/approval layer; here we just
     materialize the approved set, superseding overlapping planned sessions."""
     if not sessions:
         return 0
     from ..garmin.workouts import PUSH_TYPES
     from ..coach.schedule import local_today
 
-    today = local_today(db)  # their local day (PRD §16) — a UTC 'today' would, in their
+    today = local_today(db)  # their local day — a UTC 'today' would, in their
     # 00:00-08:00 window, drop/keep the wrong day and orphan a completed session's result.
     # Never re-issue the past, and never supersede a session already RUN today —
     # approving a Sunday-evening review whose block starts that Sunday must not
@@ -223,7 +223,7 @@ def apply_sessions(db: DbSession, sessions: list[dict], macro_plan_id: int | Non
     if not incoming:
         return 0
 
-    # Stable-ID carry-over (PRD §10): superseded sessions donate their calendar
+    # Stable-ID carry-over: superseded sessions donate their calendar
     # event / Garmin workout ids to the NEW sessions on the same date, strictly
     # one-to-one in order — two sessions on one date (e.g. run + gym) must never
     # share an id. Unclaimed donors KEEP their ids: they are superseded, so the
@@ -286,7 +286,7 @@ def apply_onboarding_draft(db: DbSession, payload: dict) -> dict:
     return {"macro_plan_id": mp_id, "sessions_written": n}
 
 
-# ------------------------------------------------------------------ result linking (§9 layer 3)
+# ------------------------------------------------------------------ result linking (layer 3)
 
 def link_results(db: DbSession, window_days: int = 45) -> int:
     """Match recent Garmin activities to the planned session they fulfilled and record
@@ -316,7 +316,7 @@ def link_results(db: DbSession, window_days: int = 45) -> int:
             # the activity with the scheduled workout's id (`raw.workoutId`), so a run done
             # a day (or more) late still links to the session it was meant to fulfil — not
             # to whatever happens to sit on the day they ran it. Falls back to the same-day
-            # match for free/unstructured runs that carry no workoutId. (§9: reflect the
+            # match for free/unstructured runs that carry no workoutId. (reflect the
             # plan as done, keyed off their watch selection.)
             session = None
             wid = (act.raw or {}).get("workoutId")
@@ -368,7 +368,7 @@ def plan_view(db: DbSession, upcoming_days: int = 30) -> dict:
 
     from ..coach import completion
     from ..coach.schedule import local_today
-    today = local_today(db)  # their local day (PRD §16), not server UTC
+    today = local_today(db)  # their local day, not server UTC
     mp = db.scalar(select(MacroPlan).where(MacroPlan.status == "active").limit(1))
     sessions = db.scalars(
         select(Session).where(

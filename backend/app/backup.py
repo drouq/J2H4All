@@ -1,4 +1,4 @@
-"""Monthly JSON state export to Google Drive (PRD §15): the coach's full state
+"""Monthly JSON state export to Google Drive: the coach's full state
 dumped to the user's own Drive — their data in their hands, independent of Render, and
 the natural migration path off the host.
 
@@ -51,7 +51,7 @@ def _rows(db, model) -> list[dict]:
 
 
 def assemble_state(db: DbSession) -> dict:
-    """The full coach state as a JSON-safe dict (PRD §15). Excludes secrets."""
+    """The full coach state as a JSON-safe dict. Excludes secrets."""
     return {
         "exported_at": _utcnow().isoformat(),
         "schema": "j2h4all-state-v1",
@@ -141,7 +141,7 @@ def _upload(token: str, folder_id: str, name: str, payload: dict) -> dict:
 
 def run_export(db: DbSession, today: date | None = None) -> dict:
     """Assemble state and upload it to Drive. Returns file info. Raises
-    CalendarNotConnected / DriveNotAuthorized to degrade loudly (PRD §15/§4)."""
+    CalendarNotConnected / DriveNotAuthorized to degrade loudly."""
     today = today or date.today()
     token = oauth.access_token(db)  # raises CalendarNotConnected if not connected
     folder_id = _ensure_folder(db, token)

@@ -53,14 +53,14 @@ or a prompt eval — `prompt_eval.py` needs real state and only exercises two su
 are a starting point to tune, not finished work. If you build a season on one, expect to
 edit its module.
 
-Still open here:
-- Two signals are still framed for the original race and should key off the goal:
-  `heat_acclimation` reads as a hot-race signal regardless of where the race is, and
-  pace-CV is labelled "the metronomic loop signal" when the metric is generic pace
-  consistency.
-- The web Plan panel still says "days to the backyard" rather than naming the format.
-- Nothing lets an athlete SET their format yet except editing the database — it needs to
-  join the goal step of onboarding (§3).
+A later sweep found three **per-surface prompts** that still named one format in their own
+text, on top of the doctrine: the morning brief told every athlete their session built
+toward "the backyard (durability, time-on-feet, fueling practice, walk/run rehearsal)",
+the post-run read called even pacing "the backyard-relevant trait", and the context
+extractor opened by asserting the athlete was "an ultra-runner training for a backyard
+ultra". Each now defers to the doctrine block it already includes, and a test covers the
+class. The signal framing (`heat_acclimation`, pace-CV) and the Plan panel's "days to the
+backyard" are fixed too.
 
 ## 3. Onboarding — mostly done
 
@@ -113,14 +113,19 @@ warnings / broken) so it can gate a deploy. It also looks in the database for th
 things that are invisible from the environment: whether an athlete profile exists, and
 whether the goal is still the placeholder.
 
-## 5. Housekeeping
+## 5. Housekeeping — mostly done
 
-- **~150 `PRD §N` comment citations** point at a private spec that isn't published. Strip
-  them, ideally during the doctrine work when those files are open anyway.
-- `docs/garmin-workout-push-plan.md` is a historical design record with resolved decisions.
-  Keep for rationale, or fold the conclusions into ARCHITECTURE.md.
-- `scripts/home_sync.ps1` is a residential-IP fallback from before the native refresh grant
-  worked. Still useful for re-bootstrapping; not needed in normal operation.
+The ~150 `PRD §N` comment citations are gone: they pointed at a private spec that isn't
+published, so they were dead references for anyone reading this code. Most were pure
+parentheticals and came out mechanically; the ~15 that carried meaning in prose were
+rewritten to keep the substance ("PRD §11.4: approval writes the store AND the calendar"
+became "Approval writes the store AND the calendar").
+
+Still open:
+- `docs/garmin-workout-push-plan.md` is a historical design record with resolved
+  decisions. Keep for rationale, or fold the conclusions into ARCHITECTURE.md.
+- `scripts/home_sync.ps1` is a residential-IP fallback from before the native refresh
+  grant worked. Still useful for re-bootstrapping; not needed in normal operation.
 - Optional lint hardening: enable ruff's `I` (import sort) and `UP` (modernization) rules
   if the repo-wide churn is ever wanted.
 

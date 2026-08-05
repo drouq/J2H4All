@@ -1,6 +1,6 @@
-"""Approval flow (PRD §11): a proposal is created (pending), surfaced for review,
+"""Approval flow: a proposal is created (pending), surfaced for review,
 and only on explicit approval does it write to the store. Idempotent — a resolved
-proposal can't be applied again (§21).
+proposal can't be applied again.
 
 Only ONE plan proposal is actionable at a time: creating a fresh proposal of the
 same kind+origin supersedes the previous pending one (a re-draft or this week's
@@ -64,7 +64,7 @@ def get(db: DbSession, proposal_id: int) -> dict | None:
 
 def approve(db: DbSession, proposal_id: int, edited_payload: dict | None = None) -> dict:
     """Apply the proposal's payload (or the user's edited version) and mark approved.
-    Raises ProposalConflict if already resolved (idempotency, §21)."""
+    Raises ProposalConflict if already resolved (idempotency)."""
     p = db.get(Proposal, proposal_id)
     if p is None:
         raise KeyError(proposal_id)
@@ -119,10 +119,10 @@ def approve(db: DbSession, proposal_id: int, edited_payload: dict | None = None)
         logger.info("Approval of proposal %d superseded %d other pending proposal(s)", proposal_id, others)
     db.commit()
 
-    # PRD §11.4: approval writes the session store AND the calendar (and, when
+    # Approval writes the session store AND the calendar (and, when
     # enabled, Garmin workouts). The store is already committed (source of truth);
     # both pushes are best-effort so an outage never rolls back an approved plan —
-    # it degrades loudly (PRD §4) by returning the error instead.
+    # it degrades loudly by returning the error instead.
     applied["calendar"] = _reconcile_calendar(db)
     applied["garmin_workouts"] = _push_garmin_workouts(db)
     return {"applied": applied}

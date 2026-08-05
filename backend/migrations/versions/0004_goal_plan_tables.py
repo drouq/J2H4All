@@ -1,4 +1,4 @@
-"""Phase 3 goal & plan tables (PRD §6.3/§8/§9/§11): goal, secondary_race,
+"""Phase 3 goal & plan tables: goal, secondary_race,
 macro_plan, session, session_result, proposal.
 
 Revision ID: 0004

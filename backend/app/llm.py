@@ -1,4 +1,4 @@
-"""Anthropic client wrapper (PRD §17: model-per-task, configurable).
+"""Anthropic client wrapper (model-per-task, configurable).
 
 Phase 2 uses a single helper — forced tool-use — because it gives exact control
 over the output JSON schema across SDK versions and is what the context
@@ -87,7 +87,7 @@ def call_tool(
 ) -> dict:
     """Run one message with a single tool forced, and return that tool's input dict.
 
-    `task` selects the model via config (PRD §17). `content` is the user-message
+    `task` selects the model via config. `content` is the user-message
     content (a string, or a list of content blocks for e.g. a PDF document).
 
     Thinking is OFF by default. `adaptive_thinking=True` turns it on, and belongs on
@@ -149,7 +149,7 @@ def call_tool(
 
 
 def call_text(task: str, system: str, content: list | str, max_tokens: int = MAX_TOKENS) -> str:
-    """Free-form text completion (e.g. the morning brief). Model per task (PRD §17)."""
+    """Free-form text completion (e.g. the morning brief). Model per task."""
     client = get_client()
     model = get_settings().model_for(task)
     with client.messages.stream(

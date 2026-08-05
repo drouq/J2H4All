@@ -1,8 +1,8 @@
-"""PDF blood-report parsing (PRD §19): PDF upload → Sonnet parses markers via a
+"""PDF blood-report parsing: PDF upload → Sonnet parses markers via a
 document content block → returns proposed blood_marker items for the same
 confirm flow as chat capture. Manual chat entry is the fallback.
 
-The medical line (PRD §13) is enforced in the prompt: extract values only, never
+The medical line is enforced in the prompt: extract values only, never
 interpret or advise here — coaching interpretation happens elsewhere, and always
 defers medical judgment to a clinician.
 """

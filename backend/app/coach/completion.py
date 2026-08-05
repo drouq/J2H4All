@@ -1,7 +1,7 @@
 """How a planned session actually turned out — the single classifier behind the
 calendar's marking, the coach's prompts, and the "what happened?" question.
 
-Five states, deterministic (PRD §9 layer 3):
+Five states, deterministic (layer 3):
 
   planned    🏃/🚶/🏋️  still ahead — today's session included, the day isn't over
   done       ✅         completed within TOLERANCE of the planned duration/distance

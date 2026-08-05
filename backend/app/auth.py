@@ -86,7 +86,7 @@ async def callback(request: Request, code: str | None = None, state: str | None 
     email = (info.get("email") or "").lower()
     verified = info.get("email_verified", False)
 
-    # PRD §3 — the single-user hard gate. Exactly one email gets a session.
+    # The single-user hard gate. Exactly one email gets a session.
     if not verified or email != settings.allowed_google_email.lower():
         request.session.clear()
         logger.warning("Rejected sign-in attempt from %s", email or "<no email>")

@@ -1,4 +1,4 @@
-"""Lifestyle-log store (PRD §12 manual-flags fallback for Garmin's blocked Lifestyle
+"""Lifestyle-log store (manual-flags fallback for Garmin's blocked Lifestyle
 Logging). The `LifestyleLog` write helper (`_upsert`) used by the merged 21:00 daily
 debrief (`coach/debrief.py`), which parses the life factors Garmin can't see — alcohol,
 illness, sleep disruptors, nutrition, extra workouts, stress — into its `data` flags,

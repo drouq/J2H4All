@@ -1,11 +1,11 @@
-"""Google Calendar OAuth (PRD §10): obtain and store a refresh token via a one-time
+"""Google Calendar OAuth: obtain and store a refresh token via a one-time
 offline-access consent, then mint short-lived access tokens from it on demand.
 
 Least-privilege scope: calendar.app.created — the app can create secondary
 calendars and fully manage events on calendars it created, and nothing else. This
-is exactly the isolation §10 wants ("we only ever touch our own events").
+is exactly the isolation we want ("we only ever touch our own events").
 
-Token resolution order: GOOGLE_REFRESH_TOKEN env (production, PRD §5) → the
+Token resolution order: GOOGLE_REFRESH_TOKEN env (production) → the
 oauth_credential row written by the connect flow (runtime-obtained fallback).
 """
 
@@ -22,8 +22,8 @@ from ..models import OAuthCredential
 logger = logging.getLogger(__name__)
 
 PROVIDER = "google_calendar"
-# Least-privilege scopes: calendar.app.created (own our training calendar, §10) +
-# drive.file (create/manage only the backup files we create, §15).
+# Least-privilege scopes: calendar.app.created (own our training calendar) +
+# drive.file (create/manage only the backup files we create).
 SCOPE = (
     "https://www.googleapis.com/auth/calendar.app.created "
     "https://www.googleapis.com/auth/drive.file"

@@ -1,6 +1,6 @@
-"""Orchestration glue for the adaptation loop (PRD §12): runs after each sync and
+"""Orchestration glue for the adaptation loop: runs after each sync and
 from the scheduled beats, sending Telegram cards where a proposal results. Every
-change is proposed, never applied silently (§11)."""
+change is proposed, never applied silently."""
 
 import logging
 from datetime import date
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def refresh_from_garmin(db: DbSession) -> None:
     """Best-effort incremental Garmin sync before a scheduled beat, so the coach reads
-    the freshest cloud data regardless of the daily cron's clock (PRD §16). A sync
+    the freshest cloud data regardless of the daily cron's clock. A sync
     failure must never block the beat — the freshness signals flag any staleness that
     remains, and the beat proceeds on existing data."""
     try:
@@ -29,7 +29,7 @@ def post_sync_coaching(db: DbSession) -> None:
     from .schedule import local_today
     from ..telegram import send_proposal_card_sync
 
-    today = local_today(db)                     # user-local day, not server-UTC (§16)
+    today = local_today(db)                     # user-local day, not server-UTC
 
     # Each stage is guarded on its own: they're independent coaching surfaces, and a
     # failure in one must not silently cost the others. Without this, an error in the
@@ -43,7 +43,7 @@ def post_sync_coaching(db: DbSession) -> None:
             logger.exception("Post-sync stage %s failed (non-fatal)", name)
             return None
 
-    _stage("post_run_reads", lambda: postrun.run_reads(db, today))   # planned-vs-actual (§12)
+    _stage("post_run_reads", lambda: postrun.run_reads(db, today))   # planned-vs-actual
     # A >20% miss gets a QUESTION before any adaptation — the data can't say why a
     # session ended early, and adapting off a guessed cause is worse than waiting.
     _stage("deviation_question", lambda: postrun.ask_about_deviations(db, today))

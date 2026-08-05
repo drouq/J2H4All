@@ -1,4 +1,4 @@
-"""Web trend series (PRD §19): load (acute:chronic), HRV/resting-HR, weekly volume
+"""Web trend series: load (acute:chronic), HRV/resting-HR, weekly volume
 vs plan, blood-marker history, VO2max / race-predictor curve. Pure read/rollup —
 no LLM. The frontend renders these as lightweight inline SVG charts."""
 
@@ -112,8 +112,8 @@ def vo2max_curve(db: DbSession) -> list[dict]:
 
 
 def durability_series(db: DbSession, today: date, days: int = 120) -> list[dict]:
-    """Per-run durability from the stream rollup (PRD §7): aerobic decoupling and per-km
-    pace CV over time — the backyard 'metronomic loop' signal. Lower is better on both;
+    """Per-run durability from the stream rollup: aerobic decoupling and per-km
+    pace CV over time — evenness under fatigue. Lower is better on both;
     the trend (is decoupling falling as the base builds?) is what matters."""
     since = today - timedelta(days=days)
     rows = db.scalars(

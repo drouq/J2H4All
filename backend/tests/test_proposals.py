@@ -1,4 +1,4 @@
-"""Approval-flow invariants (PRD §11/§21): create supersedes the same kind+origin,
+"""Approval-flow invariants: create supersedes the same kind+origin,
 approve is idempotent (no double-apply), and approving supersedes every other
 pending card so a stale one can't roll back a newer plan."""
 from datetime import date, timedelta

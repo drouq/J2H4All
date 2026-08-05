@@ -1,4 +1,4 @@
-# Render blueprint — J2H4All: one web service + cron + managed Postgres (PRD §4/§5).
+# Render blueprint — J2H4All: one web service + cron + managed Postgres.
 # Paid Starter tier everywhere so nothing sleeps and cron stays reliable.
 services:
   - type: web
@@ -53,7 +53,7 @@ services:
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
 
-  # Daily Garmin sync (PRD §7). Restored after the diauth OAuth2-refresh fix — runs
+  # Daily Garmin sync. Restored after the diauth OAuth2-refresh fix — runs
   # natively from Render again. Schedule is FIXED UTC (unlike the in-app local-clock
   # beats): 01:00 UTC — pick an hour after the athlete's night, so the morning watch sync
   # has landed sleep/HRV in Garmin's cloud before this pulls.
@@ -96,7 +96,7 @@ services:
       - key: GOOGLE_REFRESH_TOKEN
         sync: false
 
-  # Proactive-beat dispatcher (PRD §12/§16). Runs hourly (UTC); the job itself
+  # Proactive-beat dispatcher. Runs hourly (UTC); the job itself
   # checks the user's LOCAL clock and fires the morning brief / daily check-in /
   # Sunday weekly review at their configured local hour, once per local day.
   - type: cron
@@ -128,7 +128,7 @@ services:
       - key: TELEGRAM_CHAT_ID
         sync: false
 
-  # Monthly state export to Google Drive (PRD §15) — 06:00 UTC on the 1st.
+  # Monthly state export to Google Drive — 06:00 UTC on the 1st.
   - type: cron
     name: j2h4all-export
     runtime: python

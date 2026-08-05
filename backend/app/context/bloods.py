@@ -1,4 +1,4 @@
-"""Blood-marker reference-range flagging (PRD §13 stays intact: this FLAGS, never
+"""Blood-marker reference-range flagging (stays intact: this FLAGS, never
 diagnoses). Typical adult-male population ranges — NOT lab-specific — used only to mark
 a value outside the usual band so the coach can raise it and suggest a doctor. Curated
 for the athlete's relevant panel (iron status, B12/D, a few common markers).

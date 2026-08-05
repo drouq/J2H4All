@@ -1,4 +1,4 @@
-"""Garmin ingest tables: activity, wellness_daily, fitness_marker, sync_run (PRD §6.1/§6.4).
+"""Garmin ingest tables: activity, wellness_daily, fitness_marker, sync_run.
 
 Revision ID: 0002
 Revises: 0001

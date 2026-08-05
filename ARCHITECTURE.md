@@ -4,11 +4,6 @@ Design principles, system layout, and the things that were expensive to learn. I
 about to change something here, the "Hard-won learnings" section is the part worth reading
 first — several of those bugs took days to diagnose and are not obvious from the code.
 
-> **Historical note.** The codebase carries ~150 comments citing `PRD §N` sections. Those
-> refer to the original project's private product spec, which is not published here. The
-> section numbers are dead references; the *substance* of the spec is summarised below.
-> Stripping them is a tracked cleanup — see [ROADMAP.md](ROADMAP.md).
-
 ---
 
 ## 1. Design posture

@@ -1,4 +1,4 @@
-"""Rolled-up Garmin + context summary for lean Opus prompts (PRD §14 token strategy).
+"""Rolled-up Garmin + context summary for lean Opus prompts (token strategy).
 
 The store keeps the full ~2 years, but the coach reasons over weekly/monthly
 rollups plus recent detail — not raw dumps. This builds that compact picture.
@@ -22,8 +22,7 @@ def _iso_week(d: date) -> str:
 
 def training_load_balance(db: DbSession, today: date) -> dict | None:
     """Garmin's monthly training-load balance — anaerobic / low-aerobic / high-aerobic
-    load vs its OWN target ranges — a direct 80/20 intensity-distribution read (PRD §6.1
-    signals). Garmin often returns a null snapshot, so take the most recent training_status
+    load vs its OWN target ranges — a direct 80/20 intensity-distribution read (signals). Garmin often returns a null snapshot, so take the most recent training_status
     marker in the last ~45 days that actually carries balance data, and read the primary
     training device."""
     rows = db.scalars(
@@ -56,11 +55,15 @@ def training_load_balance(db: DbSession, today: date) -> dict | None:
 
 
 def heat_acclimation(db: DbSession, today: date) -> dict | None:
-    """Garmin's heat-acclimation read — directly race-relevant (the A-race is run in
-    a hot race). Lives NESTED at `mostRecentVO2Max.heatAltitudeAcclimation`
-    of the training_status marker (the top-level `heatAltitudeAcclimationDTO` stays null).
-    Altitude is ignored — the backyard is at sea level. Most recent non-null snapshot in
-    ~30 days."""
+    """Garmin's heat-acclimation read. Relevant when the athlete trains or races in
+    heat, and simply noise when they don't — the doctrine tells the coach to check the
+    race's actual conditions before reasoning from it, rather than treating the number
+    as a mandate.
+
+    Lives NESTED at `mostRecentVO2Max.heatAltitudeAcclimation` of the training_status
+    marker (the top-level `heatAltitudeAcclimationDTO` stays null). The altitude half is
+    ignored: a formal acclimatization protocol is out of scope either way. Most recent
+    non-null snapshot in ~30 days."""
     rows = db.scalars(
         select(FitnessMarker)
         .where(FitnessMarker.kind == "training_status", FitnessMarker.date >= today - timedelta(days=30))
@@ -83,7 +86,7 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
     """Weekly run volume (recent), monthly volume arc (full history), peak 4-week
     block, fitness-marker curve, acute:chronic, recent recovery trend.
 
-    The monthly arc + peak block cover the FULL stored history (PRD §14 rollups):
+    The monthly arc + peak block cover the FULL stored history (rollups):
     without them the coach only sees the recent-weeks window and misreads a big
     race week (e.g. the UTA Miler build) as an outlier instead of a peak the
     athlete trained up to — their real, already-absorbed base."""
@@ -245,7 +248,7 @@ def context_for_prompt(db: DbSession) -> dict:
     """Phase 2 context, trimmed for the plan prompt."""
     from ..coach.schedule import local_today
     snap = context_snapshot(db)
-    today_iso = local_today(db).isoformat()  # their local day (PRD §16), not server UTC
+    today_iso = local_today(db).isoformat()  # their local day, not server UTC
     return {
         "timezone": snap["timezone"],
         "diet": snap["diet"],
@@ -258,7 +261,7 @@ def context_for_prompt(db: DbSession) -> dict:
         ],
         "injuries": snap["injuries"],
         "preferences": snap["preferences"],
-        # Free-text coaching memory (PRD §6.2) — e.g. training-history blocks
+        # Free-text coaching memory — e.g. training-history blocks
         # (previous coach's methods, past race builds). Was previously dropped
         # here, so Note rows never reached any prompt.
         "coaching_notes": [

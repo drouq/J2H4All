@@ -1,13 +1,13 @@
 """Job entrypoints for schedulers (Render cron later; Windows Task Scheduler or
 manual runs while developing locally).
 
-    python -m app.jobs daily_sync     # incremental Garmin pull (PRD §7 daily-morning)
-    python -m app.jobs full_import    # one-off ~2-year bootstrap (PRD §14)
+    python -m app.jobs daily_sync     # incremental Garmin pull (daily-morning)
+    python -m app.jobs full_import    # one-off ~2-year bootstrap
     python -m app.jobs tick           # local-clock dispatcher — run frequently (~hourly)
     python -m app.jobs morning_brief  # force a beat now (manual/testing)
     python -m app.jobs daily_debrief  # feel + lifestyle (aliases: daily_checkin, lifestyle_log)
     python -m app.jobs weekly_review
-    python -m app.jobs monthly_export # dump full state to Google Drive (PRD §15)
+    python -m app.jobs monthly_export # dump full state to Google Drive
     python -m app.jobs doctor         # preflight: what's configured, what's missing
 """
 
@@ -29,10 +29,10 @@ def noop() -> None:
 
 
 def _push_calendar_after_daily_sync() -> None:
-    """After the daily Garmin sync has linked completed runs (PRD §9), reflect them
+    """After the daily Garmin sync has linked completed runs, reflect them
     on the Google Calendar — mark ✅ done and re-assert the approved plan. Runs on
     the j2h4all-cron service, which therefore needs the GOOGLE_* env (client id/secret +
-    refresh token). Best-effort: never fails the sync job. Degrades loudly (PRD §4)
+    refresh token). Best-effort: never fails the sync job. Degrades loudly
     with a one-a-day Telegram ping if the reconcile skipped/errored — most likely
     those creds are missing on the cron, so completed runs aren't being marked.
 

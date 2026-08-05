@@ -1,4 +1,4 @@
-"""The monthly Drive export (PRD §15) — the athlete's data in their own hands, and the
+"""The monthly Drive export — the athlete's data in their own hands, and the
 only copy of the coach's state that doesn't live on Render.
 
 Untested until 2026-08-03, and it had been failing since its first scheduled run: the
@@ -129,7 +129,7 @@ def test_folder_id_is_cached_after_the_first_run(db, drive):
 # ------------------------------------------------------------------ degrade loudly
 
 def test_a_drive_403_raises_rather_than_silently_skipping(db, monkeypatch):
-    """The whole point of §15 is an off-Render copy; a quiet no-op is worse than a
+    """The whole point of the backup is an off-host copy; a quiet no-op is worse than a
     crash, because the cron's alert is the only thing that surfaces it."""
     monkeypatch.setattr(backup.oauth, "access_token", lambda db: "tok")
     monkeypatch.setattr(backup.httpx, "get", lambda url, **kw: _Resp(403))

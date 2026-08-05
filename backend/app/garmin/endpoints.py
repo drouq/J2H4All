@@ -1,8 +1,8 @@
-"""Garmin Connect API paths (undocumented; PRD §7).
+"""Garmin Connect API paths (undocumented;).
 
 Single source of truth for endpoint paths so a Garmin-side change is a
 one-file fix. Mapped from the reference implementations
-(python-garminconnect / Taxuspt garmin_mcp per PRD §7); confirmed against
+(python-garminconnect / Taxuspt garmin_mcp); confirmed against
 the live API during first sync.
 """
 

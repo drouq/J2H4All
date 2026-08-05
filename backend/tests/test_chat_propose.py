@@ -1,4 +1,4 @@
-"""Coach-proposed plan changes (PRD §11): a change discussed on Telegram becomes a
+"""Coach-proposed plan changes: a change discussed on Telegram becomes a
 PENDING sessions proposal — never applied without approval — so it can reach the
 plan/calendar/watch. Covers the tool → proposal path and the response parsing.
 """

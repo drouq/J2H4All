@@ -157,3 +157,31 @@ def test_macro_prompt_phases_come_from_the_format(db):
     assert "goal-pace" in doctrine.format_for(db).phases
     _goal(db, "backyard-ultra")
     assert "loop simulation" in doctrine.format_for(db).phases
+
+
+@pytest.mark.parametrize("module,fn", [
+    ("app.coach.brief", "system_prompt"),
+    ("app.coach.postrun", "system_prompt"),
+])
+def test_per_surface_prompts_carry_no_hardcoded_format(db, module, fn):
+    """The format split moved race-specific reasoning into coach/formats/, but each
+    coaching SURFACE builds its own prompt on top of the doctrine — and three of them
+    still named one format in their own text, so a marathoner was told about
+    walk/run rehearsal and 'the backyard-relevant trait'. Those surfaces must defer
+    to the doctrine block they already include."""
+    import importlib
+
+    _goal(db, "road-marathon", distance_km=42.195, target_time="sub-3:15")
+    text = getattr(importlib.import_module(module), fn)(db)
+    for leaked in ("backyard", "walk/run rehearsal", "hourly reset"):
+        assert leaked not in text, f"{module} hardcodes {leaked!r}"
+
+
+def test_context_extraction_assumes_no_race_format(db):
+    """It captures bloods, injuries and travel — none of which depend on the race.
+    It used to open by asserting the athlete was 'training for a backyard ultra'."""
+    from app.context import extract
+    from datetime import date as _d
+
+    text = extract._system(_d(2027, 1, 1), "Europe/London")
+    assert "backyard" not in text and "ultra-runner" not in text

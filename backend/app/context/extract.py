@@ -1,8 +1,8 @@
-"""Chat-driven context extraction — the Eponge pattern (PRD §19).
+"""Chat-driven context extraction — the Eponge pattern.
 
 The user talks; Sonnet extracts to typed fields; the API returns the proposed
 items; the user confirms/edits; only then does `store.apply_items` write. This
-module does the extract half. Timezone-via-chat and treadmill windows (§16) are
+module does the extract half. Timezone-via-chat and treadmill windows are
 just two of the item kinds handled here.
 """
 
@@ -72,8 +72,8 @@ EXTRACT_TOOL_SCHEMA = {
 
 def _system(today: date, current_tz: str) -> str:
     return (
-        "You are the context-extraction step of J2H4All, a single-user running-coach app for one athlete, "
-        "an ultra-runner training for a backyard ultra. Read the user's message and extract any "
+        "You are the context-extraction step of J2H4All, a single-user running-coach app for one "
+        "endurance athlete. Read the user's message and extract any "
         "durable facts about their body, life, or constraints into typed items. Only extract things "
         "worth persisting; ignore small talk and transient chatter.\n\n"
         f"Today is {today.isoformat()}. The user's current timezone is {current_tz}.\n\n"

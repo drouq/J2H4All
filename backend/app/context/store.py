@@ -1,6 +1,6 @@
 """Apply confirmed context items to the store, and read the current snapshot.
 
-Writes happen ONLY here, only from confirmed items (PRD §19). The extract step
+Writes happen ONLY here, only from confirmed items. The extract step
 proposes; the user confirms; this applies. Idempotent where a natural key exists
 (blood markers by name+date, preferences by key, timezone as the single row).
 """
@@ -304,13 +304,13 @@ def get_meta(db: Session, key: str) -> str | None:
 
 
 def snapshot(db: Session) -> dict:
-    """Current context for display (PRD §19 web trend/context views)."""
+    """Current context for display (web trend/context views)."""
     profile = db.scalar(select(DietaryProfile).limit(1))
     markers = db.scalars(
         select(BloodMarker).order_by(BloodMarker.name, BloodMarker.measured_on.desc())
     ).all()
     # Latest reading per marker + count for trend, plus a reference-range flag (typical
-    # population range, NOT lab-specific / not diagnostic — the coach flags + defers, §13).
+    # population range, NOT lab-specific / not diagnostic — the coach flags + defers).
     from .bloods import flag_marker, marker_reference
     latest: dict[str, dict] = {}
     for m in markers:

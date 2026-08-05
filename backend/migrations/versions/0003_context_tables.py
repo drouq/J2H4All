@@ -1,4 +1,4 @@
-"""Phase 2 context tables (PRD §6.2/§16): dietary_profile, blood_marker,
+"""Phase 2 context tables: dietary_profile, blood_marker,
 availability_window, injury_log, preference, note, user_state.
 
 Revision ID: 0003

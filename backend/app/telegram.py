@@ -145,7 +145,7 @@ def send_card_sync(text: str, keyboard: list[list[dict]], chat_id: str | None = 
 
 
 def send_proposal_card_sync(proposal_id: int, summary: str, chat_id: str | None = None) -> None:
-    """Approval card with inline Approve / Edit / Reject buttons (PRD §11)."""
+    """Approval card with inline Approve / Edit / Reject buttons."""
     keyboard = [[
         {"text": "✅ Approve", "callback_data": f"apr:{proposal_id}"},
         {"text": "✏️ Edit", "callback_data": f"edt:{proposal_id}"},
@@ -202,7 +202,7 @@ async def _sync_and_report(chat_id: str) -> None:
 
 
 def _locked(chat_id: str) -> bool:
-    """PRD §3 — everything is locked to the single configured chat ID."""
+    """Everything is locked to the single configured chat ID."""
     tg = get_settings().telegram_chat_id
     return bool(tg) and chat_id == str(tg)
 
@@ -261,7 +261,7 @@ COMMANDS = (
 def _push_plan() -> None:
     """Re-sync the current APPROVED plan to Google Calendar + Garmin (the Telegram
     twin of the web 'Push plan' button). This pushes what's already in the store —
-    it does not change the plan, so no approval gate applies (PRD §2.3)."""
+    it does not change the plan, so no approval gate applies."""
     from .db import SessionLocal
     from .calendar.sync import safe_reconcile
     from .coach.proposal_actions import _calendar_line, _garmin_line
@@ -332,7 +332,7 @@ def _handle_free_text(text: str) -> None:
       3. a note within the check-in window     -> capture as the check-in note
          (unless it's plainly a question — then answer it and keep the flag armed
          so a later note still lands)
-      4. otherwise                             -> a coaching question (PRD §13)
+      4. otherwise                             -> a coaching question
     """
     from .db import SessionLocal
     from .coach import chat, debrief, postrun, revise
@@ -396,7 +396,7 @@ def _handle_free_text(text: str) -> None:
         send_message_sync(answer)
         if proposal is not None:
             send_proposal_card_sync(proposal.id, "📝 Proposed plan change:\n\n" + proposal.summary)
-        # Chat is also context capture (PRD §16/§19, Eponge pattern): offer to
+        # Chat is also context capture (the Eponge pattern): offer to
         # save any durable facts the message carried — confirm-before-write.
         _offer_context_capture(db, text)
     except Exception:
@@ -412,7 +412,7 @@ _PENDING_CTX_KEY = "pending_context_items"  # filtered from prompts (internal ma
 def _offer_context_capture(db, text: str) -> None:
     """Telegram arm of the Eponge flow: extract durable facts ('I'm in Tokyo this
     week', 'ferritin came back at 30') and offer a Save/Skip card. Nothing is
-    written until the user taps Save — PRD §19's confirm step, as inline buttons.
+    written until the user taps Save — the confirm step, as inline buttons.
     Best-effort: never disturb the coaching answer that was already sent."""
     import json as _json
     from datetime import datetime, timezone as _tz

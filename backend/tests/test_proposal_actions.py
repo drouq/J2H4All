@@ -1,4 +1,4 @@
-"""Approval-card feedback (PRD §11.4): after an approve tap, the card must report
+"""Approval-card feedback: after an approve tap, the card must report
 what actually reached Google Calendar and the Garmin watch — including a skipped
 Garmin push, so a silently-reverted flag can't masquerade as a successful sync."""
 from app.coach.proposal_actions import _calendar_line, _garmin_line

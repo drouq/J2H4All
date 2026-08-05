@@ -1,4 +1,4 @@
-"""Local-clock dispatcher (PRD §16): a fixed-interval cron can't know the user's
+"""Local-clock dispatcher: a fixed-interval cron can't know the user's
 local morning, so a frequent `tick` computes their local time (from user_state.timezone)
 and fires each beat at its configured local hour, at most once per local day.
 
@@ -43,7 +43,7 @@ def _mark_ran(db: DbSession, job: str, local_day: date) -> bool:
 
 
 def local_tz(db: DbSession) -> ZoneInfo:
-    """The athlete's configured zone (set by chat — 'I'm in London', PRD §16).
+    """The athlete's configured zone (set by chat — 'I'm in London').
     Falls back to UTC on an unset/bogus value rather than raising."""
     tz = get_or_create_state(db).timezone or "UTC"
     try:
@@ -58,7 +58,7 @@ def local_now(db: DbSession) -> datetime:
 
 
 def to_local(db: DbSession, dt: datetime) -> datetime:
-    """Render a stored UTC timestamp on the athlete's clock (PRD §16: store UTC,
+    """Render a stored UTC timestamp on the athlete's clock (store UTC,
     render local). Any time shown to them must go through this — a bare UTC hour
     reads up to a day wrong in a far-from-UTC zone. Naive input is assumed UTC (SQLite
     round-trips DateTime(timezone=True) as naive)."""
@@ -74,7 +74,7 @@ def fmt_local(db: DbSession, dt: datetime) -> str:
 
 
 def local_today(db: DbSession) -> date:
-    """The user's LOCAL calendar date (PRD §16). Any coaching surface that reasons
+    """The user's LOCAL calendar date. Any coaching surface that reasons
     about 'today' must use this, not date.today() — on Render (UTC) the server day
     lags the athlete's evening by several hours."""
     return local_now(db).date()

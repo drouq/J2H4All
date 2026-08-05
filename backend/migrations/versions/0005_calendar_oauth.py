@@ -1,4 +1,4 @@
-"""Phase 4 (PRD §10): Google Calendar integration.
+"""Phase 4: Google Calendar integration.
 - oauth_credential: server-side refresh token store (Google Calendar).
 - user_state.training_calendar_id: the dedicated J2H4All calendar we own.
 

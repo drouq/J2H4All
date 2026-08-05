@@ -1,4 +1,4 @@
-"""One-time interactive Garmin login (PRD §7).
+"""One-time interactive Garmin login.
 
 Run in YOUR terminal (credentials never leave this machine):
 

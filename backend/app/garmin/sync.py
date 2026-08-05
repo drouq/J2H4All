@@ -1,4 +1,4 @@
-"""Garmin sync engine (PRD §7, §14, §15).
+"""Garmin sync engine.
 
 Full ~2-year bootstrap import + incremental daily sync, idempotent upserts,
 sync_run audit trail, and loud-not-silent failure alerts via Telegram.
@@ -22,7 +22,7 @@ from .weather import fetch_weather
 
 logger = logging.getLogger(__name__)
 
-FULL_IMPORT_DAYS = 730          # ~2 years (PRD §14)
+FULL_IMPORT_DAYS = 730          # ~2 years
 DETAIL_WINDOW_DAYS = 120        # splits/HR-zones fetched per-activity inside this window
 INCREMENTAL_WELLNESS_DAYS = 7   # overnight data keeps updating; re-pull a week
 ACTIVITY_PAGE_SIZE = 100
@@ -355,7 +355,7 @@ def run_sync(kind: str = "incremental") -> SyncRun:
         run.finished_at = _utcnow()
         run.stats = stats
         db.commit()
-        # Link freshly-synced runs to planned sessions (PRD §9 layer 3). Best-effort:
+        # Link freshly-synced runs to planned sessions (layer 3). Best-effort:
         # a linking hiccup must never fail the sync itself.
         try:
             from ..plan.store import link_results
@@ -367,7 +367,7 @@ def run_sync(kind: str = "incremental") -> SyncRun:
         except Exception:
             logger.exception("Result linking failed (non-fatal)")
         # Fill weather for freshly-synced outdoor runs BEFORE the post-run read, so the coach
-        # reads each run in its conditions (PRD §12). Best-effort, keyless, no Garmin — only
+        # reads each run in its conditions. Best-effort, keyless, no Garmin — only
         # fetches recent GPS runs still missing weather, so it's a handful of calls at most.
         try:
             wx = backfill_weather(days=14)
@@ -376,7 +376,7 @@ def run_sync(kind: str = "incremental") -> SyncRun:
                 logger.info("Post-sync weather: %s", wx)
         except Exception:
             logger.exception("Post-sync weather backfill failed (non-fatal)")
-        # Coaching layer (PRD §12): post-activity read + red-flag proactivity. All
+        # Coaching layer: post-activity read + red-flag proactivity. All
         # best-effort — a coaching hiccup must never fail the underlying sync.
         try:
             from ..coach.adapt import post_sync_coaching
@@ -392,7 +392,7 @@ def run_sync(kind: str = "incremental") -> SyncRun:
         run.detail = f"{exc}\n{traceback.format_exc()[-1500:]}"
         db.commit()
         logger.exception("Sync %s failed", kind)
-        # Degrade loudly (PRD §15), routed by cause: a rejected garth token gets an
+        # Degrade loudly, routed by cause: a rejected garth token gets an
         # actionable re-auth ping; anything else defers to the staleness watchdog.
         try:
             from .client import GarminAuthError

@@ -38,7 +38,7 @@ class Heartbeat(Base):
 
 
 class Activity(Base):
-    """One Garmin activity (PRD §6.1). Typed columns for what the coach queries;
+    """One Garmin activity. Typed columns for what the coach queries;
     the full payloads live in `raw` so nothing is lost."""
 
     __tablename__ = "activity"
@@ -80,7 +80,7 @@ class Activity(Base):
 
 
 class WellnessDaily(Base):
-    """Per-day recovery picture (PRD §6.1): RHR, HRV, sleep, Body Battery, stress,
+    """Per-day recovery picture: RHR, HRV, sleep, Body Battery, stress,
     weight. `raw` holds each source payload keyed by source name."""
 
     __tablename__ = "wellness_daily"
@@ -105,7 +105,7 @@ class WellnessDaily(Base):
 
 
 class FitnessMarker(Base):
-    """Periodic fitness signals (PRD §6.1): VO2max trend, race predictor,
+    """Periodic fitness signals: VO2max trend, race predictor,
     training status/load. Generic kind+value so new markers slot in."""
 
     __tablename__ = "fitness_marker"
@@ -120,7 +120,8 @@ class FitnessMarker(Base):
 
 
 class SyncRun(Base):
-    """Sync audit trail + staleness source (PRD §6.4 sync_status, §15 degrade loudly)."""
+    """Sync audit trail + staleness source: what `sync_status` reads, and what lets
+    the app degrade loudly instead of coaching off stale data."""
 
     __tablename__ = "sync_run"
 
@@ -134,7 +135,7 @@ class SyncRun(Base):
     alerted: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
 
-# ---------------------------------------------------------------- Phase 2: context (PRD §6.2)
+# ---------------------------------------------------------------- Phase 2: context
 
 class AthleteProfile(Base):
     """WHO the athlete is. Single row, id pinned to 1 (same shape as UserState).
@@ -188,7 +189,7 @@ class DietaryProfile(Base):
 
 
 class BloodMarker(Base):
-    """One marker reading, trended over time (PRD §6.2). name+date is the natural key."""
+    """One marker reading, trended over time. name+date is the natural key."""
 
     __tablename__ = "blood_marker"
     __table_args__ = (UniqueConstraint("name", "measured_on", name="uq_blood_marker_name_date"),)
@@ -204,7 +205,7 @@ class BloodMarker(Base):
 
 class AvailabilityWindow(Base):
     """Dated training-constraint window. Treadmill is v1's first-class type; modeled
-    generically so 'track only' / 'limited time' slot in later without a rebuild (PRD §6.2)."""
+    generically so 'track only' / 'limited time' slot in later without a rebuild."""
 
     __tablename__ = "availability_window"
 
@@ -217,7 +218,7 @@ class AvailabilityWindow(Base):
 
 
 class InjuryLog(Base):
-    """Body part, status, dates, notes (PRD §6.2)."""
+    """Body part, status, dates, notes."""
 
     __tablename__ = "injury_log"
 
@@ -232,7 +233,7 @@ class InjuryLog(Base):
 
 
 class Preference(Base):
-    """Structured constraints: long-run day, no-sessions-before time, equipment access (PRD §6.2)."""
+    """Structured constraints: long-run day, no-sessions-before time, equipment access."""
 
     __tablename__ = "preference"
 
@@ -243,7 +244,7 @@ class Preference(Base):
 
 
 class Note(Base):
-    """Free-text coaching memory that doesn't fit a field (PRD §6.2)."""
+    """Free-text coaching memory that doesn't fit a field."""
 
     __tablename__ = "note"
 
@@ -253,14 +254,14 @@ class Note(Base):
 
 
 class UserState(Base):
-    """Single-row app state. Current timezone is set by the user via chat (PRD §16);
+    """Single-row app state. Current timezone is set by the user via chat;
     everything stored UTC, rendered in this zone. id is pinned to 1."""
 
     __tablename__ = "user_state"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)  # always 1
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, server_default=text("'UTC'"))
-    # The dedicated "J2H4All Training" Google calendar we create and exclusively own (PRD §10).
+    # The dedicated "J2H4All Training" Google calendar we create and exclusively own.
     training_calendar_id: Mapped[str | None] = mapped_column(String(255))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -270,7 +271,7 @@ class OAuthCredential(Base):
 
     Obtained once via an interactive offline-access consent flow and persisted so
     the coach can push to the calendar even when no browser session is open. Never
-    sent to the client. In production GOOGLE_REFRESH_TOKEN (env, PRD §5) takes
+    sent to the client. In production GOOGLE_REFRESH_TOKEN (env) takes
     precedence; this row is the runtime-obtained fallback."""
 
     __tablename__ = "oauth_credential"
@@ -281,11 +282,11 @@ class OAuthCredential(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-# ---------------------------------------------------------------- Phase 3: goal & plan (PRD §6.3/§8/§9)
+# ---------------------------------------------------------------- Phase 3: goal & plan
 
 class Goal(Base):
     """The primary A-race, structured so the coach knows this is a metronomic-
-    durability + sleep-deprivation + hourly-fueling problem (PRD §8). One active."""
+    durability + sleep-deprivation + hourly-fueling problem. One active."""
 
     __tablename__ = "goal"
 
@@ -313,7 +314,7 @@ class Goal(Base):
 
 
 class SecondaryRace(Base):
-    """Supporting races the coach reasons about for interplay/taper depth (PRD §8)."""
+    """Supporting races the coach reasons about for interplay/taper depth."""
 
     __tablename__ = "secondary_race"
 
@@ -328,7 +329,7 @@ class SecondaryRace(Base):
 
 
 class MacroPlan(Base):
-    """Layer 1 (PRD §9): dated phases + weekly targets to race day. Stable; a new
+    """Layer 1: dated phases + weekly targets to race day. Stable; a new
     plan supersedes the prior one rather than mutating it."""
 
     __tablename__ = "macro_plan"
@@ -343,8 +344,8 @@ class MacroPlan(Base):
 
 
 class Session(Base):
-    """Layer 2 (PRD §9): a detailed planned session in the rolling window. Every
-    session carries its 'why' (purpose). Superseded, never silently swapped (§11)."""
+    """Layer 2: a detailed planned session in the rolling window. Every
+    session carries its 'why' (purpose). Superseded, never silently swapped."""
 
     __tablename__ = "session"
 
@@ -372,7 +373,7 @@ class Session(Base):
 
 
 class SessionResult(Base):
-    """Layer 3 (PRD §9): what Garmin says actually happened, linked to a planned
+    """Layer 3: what Garmin says actually happened, linked to a planned
     session. The coaching 'read' (HR drift, over/under-cooked) lands in Phase 5."""
 
     __tablename__ = "session_result"
@@ -396,8 +397,8 @@ class SessionResult(Base):
 
 
 class Proposal(Base):
-    """Pending/approved/rejected side-effectful changes (PRD §11). Persisted so an
-    approval survives restarts and can't be double-applied (§21 idempotency)."""
+    """Pending/approved/rejected side-effectful changes. Persisted so an
+    approval survives restarts and can't be double-applied (idempotency)."""
 
     __tablename__ = "proposal"
 
@@ -411,11 +412,11 @@ class Proposal(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
-# ---------------------------------------------------------------- Phase 5: adaptation & proactivity (PRD §12)
+# ---------------------------------------------------------------- Phase 5: adaptation & proactivity
 
 class Checkin(Base):
     """Daily subjective check-in — perceived effort, soreness, motivation, life
-    stress (PRD §12). Garmin can't see these; a real coach asks. One row/day."""
+    stress. Garmin can't see these; a real coach asks. One row/day."""
 
     __tablename__ = "checkin"
 
@@ -448,7 +449,7 @@ class LifestyleLog(Base):
 
 
 class Message(Base):
-    """Coaching chat history, shared by both surfaces (PRD §6.4). Flat log — one
+    """Coaching chat history, shared by both surfaces. Flat log — one
     implicit conversation for the single user."""
 
     __tablename__ = "message"
@@ -462,7 +463,7 @@ class Message(Base):
 
 class ScheduledJobRun(Base):
     """One row per (job, local date) it fired — lets a fixed-interval cron dispatch
-    on the user's LOCAL clock (PRD §16) exactly once per day, idempotently."""
+    on the user's LOCAL clock exactly once per day, idempotently."""
 
     __tablename__ = "scheduled_job_run"
     __table_args__ = (UniqueConstraint("job", "ran_on", name="uq_scheduled_job_run"),)

@@ -1,6 +1,6 @@
-"""Post-activity read (PRD §12): after a run syncs, compare planned vs actual and
+"""Post-activity read: after a run syncs, compare planned vs actual and
 log a short read. Small deviations are *noted*, not re-planned — the weekly review
-(or a red flag) owns adaptation. Sonnet tier (§17).
+(or a red flag) owns adaptation. Sonnet tier.
 
 Also owns the off-plan QUESTION (`ask_about_deviations`): when a session lands more
 than 20% off its prescription the coach asks what happened instead of inferring a
@@ -49,7 +49,7 @@ def system_prompt(db, today: date | None = None) -> str:
         "read — did they hit it, over/under-cook it, any HR drift vs the target zone. When the `durability` "
         "block is present, ground the drift comment in it: aerobic_decoupling_pct (>~5% on an easy run = "
         "notable cardiac drift / aerobic base still building; low = holding well) and pace_cv_pct (low = "
-        "metronomic, the backyard-relevant trait). Don't recite every number — interpret, and when it's "
+        "even pacing held under fatigue). Don't recite every number — interpret, and when it's "
         "telling, connect the read to what the race demands (see doctrine below). Do NOT propose "
         "plan changes here (that's the weekly review's job). Only set flagged=true for something acute: run "
         "HR far above what the pace/effort warrants (possible illness), a large unexplained shortfall, or a "

@@ -1,4 +1,4 @@
-"""Phase 5 (PRD §12): adaptation & proactivity.
+"""Phase 5: adaptation & proactivity.
 - checkin: daily subjective check-in
 - session_result.read_summary/flagged: coach's planned-vs-actual read
 - scheduled_job_run: local-clock dispatch idempotency

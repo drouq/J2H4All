@@ -3,7 +3,7 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# PRD §17 — tiered by task, overridable via MODEL_MAP_JSON without a code change.
+# Tiered by task, overridable via MODEL_MAP_JSON without a code change.
 # (race-strategy reasoning lives in coach_chat; a dedicated race_strategy task
 # gets added here the day a race-plan surface is built, likely near race week.)
 #
@@ -71,8 +71,8 @@ class Settings(BaseSettings):
 
     model_map_json: str = ""
 
-    # Proactive-cadence hours, on the user's LOCAL clock (PRD §16/§19). Exact hours
-    # configurable without a code change. Weekly review is Sunday evening (§19).
+    # Proactive-cadence hours, on the user's LOCAL clock. Exact hours
+    # configurable without a code change. Weekly review is Sunday evening.
     # The brief runs at 10:00 local: AFTER the 09:00-SGT daily sync (01:00 UTC cron)
     # so it briefs on last night's sleep/HRV, not yesterday's. A non-zero minute
     # needs the tick cron denser than hourly (see render*.yaml j2h4all-tick).

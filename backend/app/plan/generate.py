@@ -1,11 +1,11 @@
-"""Opus-driven plan generation (PRD §9, §14, §17).
+"""Opus-driven plan generation.
 
 Two generators, both returning proposed payloads (nothing is written here — the
-approval flow writes on approval, §11):
+approval flow writes on approval):
 - generate_macro_plan: dated phases + weekly targets to race day (layer 1)
 - generate_sessions: the next ~30 days of detailed sessions (layer 2)
 
-The coach reasons over rolled-up Garmin summaries + context (§14), and must see
+The coach reasons over rolled-up Garmin summaries + context, and must see
 the race format's demands and the B-race interplay.
 """
 
@@ -92,7 +92,7 @@ def _facts_block(db, today: date) -> str:
 
     facts = {
         "today": today.isoformat(),
-        **goal_view(db, today),  # goal + secondary_races from the store (store is truth, §2.2)
+        **goal_view(db, today),  # goal + secondary_races from the store (store is truth)
         "garmin_summary": garmin_summary(db, today),
         "context": context_for_prompt(db),
     }
@@ -103,7 +103,7 @@ def _call_guarded(what: str, key: str, call) -> dict:
     """The malformed-tool-output failure mode (everything crammed into the first
     string field) can survive llm.py's salvage when an embedded array is truncated
     mid-JSON. Persisting such a payload breaks the proposal card — retry once,
-    then degrade loudly (§2.4) instead of returning a plan with no {key}."""
+    then degrade loudly instead of returning a plan with no {key}."""
     payload = call()
     if not payload.get(key):
         logger.warning("%s returned no %s; retrying once", what, key)
@@ -165,7 +165,7 @@ def generate_sessions(db, today: date, macro: dict, days: int = SESSION_WINDOW_D
 
 
 def generate_onboarding_draft(db, today: date) -> dict:
-    """Draft-first onboarding (§14): baseline macro plan + first 30-day block, as one proposal payload."""
+    """Draft-first onboarding: baseline macro plan + first 30-day block, as one proposal payload."""
     macro = generate_macro_plan(db, today)
     sessions = generate_sessions(db, today, macro)
     return {"macro_plan": macro, "sessions": sessions.get("sessions", [])}

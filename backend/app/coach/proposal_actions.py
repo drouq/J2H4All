@@ -1,5 +1,5 @@
-"""Apply an inline Approve / Edit / Reject tap to a proposal (PRD §11), with
-idempotency (§21) — a resolved proposal can't be re-applied."""
+"""Apply an inline Approve / Edit / Reject tap to a proposal, with
+idempotency — a resolved proposal can't be re-applied."""
 
 import logging
 

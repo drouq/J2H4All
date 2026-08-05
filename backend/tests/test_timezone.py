@@ -1,4 +1,4 @@
-"""Local-clock rendering (PRD §16: store UTC, render LOCAL).
+"""Local-clock rendering (store UTC, render LOCAL).
 
 Regression: the morning brief told the athlete "your watch synced at 2am" — our 01:00-UTC
 cron's pull timestamp, quoted as a raw UTC hour (8h off in Singapore) AND mislabelled
@@ -40,7 +40,7 @@ def test_fmt_local_renders_offset(db):
 
 
 def test_local_tz_follows_travel_not_hardcoded(db):
-    """§16: the zone is set by chat and must follow them — never a hardcoded +08."""
+    """The zone is set by chat and must follow them — never a hardcoded offset."""
     _set_tz(db, "Europe/London")
     # 02:00 UTC in July = 03:00 BST.
     assert schedule.to_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc)).hour == 3

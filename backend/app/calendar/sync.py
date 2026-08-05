@@ -1,14 +1,14 @@
-"""Reconcile the dedicated J2H4All Training calendar to the store (PRD §10).
+"""Reconcile the dedicated J2H4All Training calendar to the store.
 
 The store is the source of truth; this makes Google Calendar *match* it for the
 future window. One event per planned (non-rest) session, updated in place via the
 stable event ID — never duplicated. Events for dates that no longer hold a workout
 (superseded, deleted, or turned into a rest day) are removed.
 
-Triggers: a proposal approval (PRD §11.4), the manual "sync to calendar" button,
+Triggers: a proposal approval, the manual "sync to calendar" button,
 AND — via `safe_reconcile` — the daily Garmin sync cron, so runs Garmin confirmed
 get marked ✅ done without waiting for the next approval. This does NOT weaken the
-approval gate (PRD §2.3): reconcile only ever mirrors sessions that are already
+approval gate: reconcile only ever mirrors sessions that are already
 `planned` in the store (unapproved changes live in the `proposal` table, never in
 `Session` rows) and marks completed reality — it can't introduce a plan change.
 """
@@ -139,7 +139,7 @@ def reconcile(db: DbSession, window_start: date | None = None) -> dict:
     ).all():
         s.calendar_event_id = None
 
-    # ---- past sweep (runs under the same explicit triggers — PRD §2.3 holds) ----
+    # ---- past sweep (runs under the same explicit triggers — the approval gate holds) ----
     # 1) Superseded past sessions still holding an event = workouts that were
     #    rescheduled away after their date passed; their events are stale.
     #    Unbounded on purpose: deleting nulls the id, so each is handled once.
@@ -238,7 +238,7 @@ def reconcile(db: DbSession, window_start: date | None = None) -> dict:
 def safe_reconcile(db: DbSession) -> dict:
     """Best-effort reconcile for callers that must never raise — the approval path
     and the daily-sync cron. Guarded by connection state; a calendar outage returns
-    an error dict instead of propagating (PRD §4: degrade loudly, don't roll back /
+    an error dict instead of propagating (degrade loudly, don't roll back /
     fail the caller). Result shape matches `reconcile` on success, else
     {'skipped': ...} or {'error': ...}."""
     if not oauth.is_connected(db):

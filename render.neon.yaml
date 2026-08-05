@@ -65,7 +65,7 @@ services:
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
 
-  # Daily Garmin sync (PRD §7). Restored after the diauth OAuth2-refresh fix — runs
+  # Daily Garmin sync. Restored after the diauth OAuth2-refresh fix — runs
   # natively from Render again. Schedule is FIXED UTC (unlike the in-app local-clock
   # beats): 01:00 UTC — pick an hour that lands after the athlete's night, so the morning watch
   # sync has landed sleep/HRV in Garmin's cloud before this pulls. If he relocates,
@@ -108,7 +108,7 @@ services:
       - key: GOOGLE_REFRESH_TOKEN
         sync: false
 
-  # Proactive-beat dispatcher (PRD §12/§16). Hourly (UTC); the job checks the
+  # Proactive-beat dispatcher. Hourly (UTC); the job checks the
   # user's LOCAL clock and fires brief / check-in / Sunday review once per local
   # day. (Run denser than hourly only if a beat is configured on a half-hour.)
   - type: cron
@@ -138,7 +138,7 @@ services:
       - key: TELEGRAM_CHAT_ID
         sync: false
 
-  # Monthly state export to Google Drive (PRD §15) — 06:00 UTC on the 1st.
+  # Monthly state export to Google Drive — 06:00 UTC on the 1st.
   - type: cron
     name: j2h4all-export
     runtime: python

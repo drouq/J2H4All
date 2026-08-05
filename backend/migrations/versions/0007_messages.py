@@ -1,4 +1,4 @@
-"""Phase 6 (PRD §6.4): coaching chat history shared by both surfaces.
+"""Phase 6: coaching chat history shared by both surfaces.
 
 Revision ID: 0007
 Revises: 0006
