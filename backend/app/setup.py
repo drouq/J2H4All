@@ -118,12 +118,21 @@ def steps(db) -> list[Step]:
         "Connected." if connected else "Not connected - sessions won't reach your calendar.",
         "Use Connect Google Calendar in the Calendar panel.",
     ))
+    # Bound may come from the env var OR from pairing, so ask the resolver rather
+    # than the setting - reading only the env would report a paired bot as missing.
+    from . import telegram_link
+
+    bound = _safe(lambda: telegram_link.bound_chat_id(db), None)
     out.append(Step(
-        "telegram", "Telegram", bool(s.telegram_bot_token and s.telegram_chat_id),
-        ("Connected." if s.telegram_bot_token and s.telegram_chat_id else
+        "telegram", "Telegram", bool(s.telegram_bot_token and bound),
+        ("Connected." if s.telegram_bot_token and bound else
+         "Bot configured but not linked to a chat yet - it currently answers nobody."
+         if s.telegram_bot_token else
          "Not configured - no morning brief, evening debrief or approval cards."),
-        "Create a bot with @BotFather and set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID "
-        "(see SETUP.md step 5).",
+        ("Get a pairing code below and send it to your bot."
+         if s.telegram_bot_token else
+         "Create a bot with @BotFather and set TELEGRAM_BOT_TOKEN (see SETUP.md step 5). "
+         "You can then link it from here - no need to hunt for a chat ID."),
     ))
 
     # --- the output ---

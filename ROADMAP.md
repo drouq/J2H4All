@@ -62,7 +62,7 @@ ultra". Each now defers to the doctrine block it already includes, and a test co
 class. The signal framing (`heat_acclimation`, pace-CV) and the Plan panel's "days to the
 backyard" are fixed too.
 
-## 3. Onboarding — mostly done
+## 3. Onboarding — ✅ DONE
 
 A **Setup panel** is the first thing in the app. It reports every step (AI key, profile,
 race, Garmin, history, calendar, Telegram, plan), says what to DO about each gap, and
@@ -88,14 +88,27 @@ preference so it never reaches the context panel or a prompt. The environment va
 still wins if set. **Nobody has to edit a host environment variable for Garmin any more** —
 that was the step most likely to strand a self-hoster.
 
+**Telegram pairing** (`coach`-adjacent module `telegram_link.py`). Click "Get a pairing
+code", send the 8 digits to your bot, done — no more digging a numeric chat ID out of
+`getUpdates`. Only the SOURCE of the bound chat id changed; the gate is exactly as strict:
+
+- The environment variable **always wins**, so an operator-set gate can't be altered from
+  inside the app, and pairing is refused entirely when it is set.
+- **Unbound means NOBODY**, never everybody. With no env var and nothing paired the gate
+  rejects every sender. It fails closed, and three tests assert it directly — verified by
+  deliberately inverting the gate and confirming they catch it.
+- One chat, ever: a second chat can't pair over an existing binding without an explicit
+  unpair. The code is 8 digits from `secrets`, expires in 10 minutes, and is single-use
+  **even when wrong**, so one armed window isn't unlimited guesses.
+- A wrong guess gets silence, so the bot can't be probed to reveal that a pairing is in
+  progress.
+- The configured (env) case resolves without a database query at all, and the paired value
+  is cached for a minute — message spam can't be used to keep a scale-to-zero database awake.
+
+`TELEGRAM_CHAT_ID` is no longer required to boot in production: unbound is the safe state,
+and requiring it would make pairing impossible in the one place it matters.
+
 Still open:
-- **Telegram pairing code** — show a code in the web app, have the athlete message it to
-  their bot, bind that chat. Deliberately NOT built yet: it moves the single-user Telegram
-  gate from an environment variable into the database, and that gate is one of the two
-  hard rules. The gate must stay exactly as strict (env keeping precedence) and needs its
-  own test coverage before it ships. It is worth doing — hunting a numeric chat ID in
-  `getUpdates` is a genuinely bad first experience — but not worth slipping in as wizard
-  plumbing.
 - A guided step-by-step flow rather than a status list. The list is honest and useful;
   a wizard that walks someone through in order would be better.
 - Triggering the history import from the web app (it is a CLI job today).

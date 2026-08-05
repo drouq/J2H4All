@@ -38,9 +38,9 @@ Two honest caveats:
    point to tune — [`coach/formats/`](backend/app/coach/formats/) is one small file per
    format, deliberately easy to edit.
 2. **Onboarding is a status list, not a guided wizard.** The Setup panel tells you what's
-   done, what's missing and what to do about each gap, and lets you set your race and
-   paste your Garmin token. It won't hold your hand through the steps in order. Telegram
-   still needs a chat ID found by hand. See [ROADMAP.md](ROADMAP.md).
+   done, what's missing and what to do about each gap, and lets you set your race, paste
+   your Garmin token and pair your Telegram bot with a code. It won't hold your hand
+   through the steps in order. See [ROADMAP.md](ROADMAP.md).
 
 **No personal data from the original install ships in this repo** — no athlete, no race,
 no medical history, no credentials. Every identifier is yours to fill in.

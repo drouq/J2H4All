@@ -70,8 +70,7 @@ async def send_message(chat_id: str, text: str) -> None:
 def send_message_sync(text: str, chat_id: str | None = None) -> None:
     """Blocking send for non-async contexts (sync engine, cron jobs). Splits
     messages over Telegram's 4096-char limit into chunks."""
-    settings = get_settings()
-    chat_id = chat_id or settings.telegram_chat_id
+    chat_id = chat_id or _default_chat()
     url = _api_url("sendMessage")
     if not url or not chat_id:
         logger.warning("Telegram not configured; dropping outbound message")
@@ -133,7 +132,7 @@ def _send_html_or_plain(method: str, payload: dict, raw_text: str) -> None:
 
 def send_card_sync(text: str, keyboard: list[list[dict]], chat_id: str | None = None) -> None:
     """Send a message with an inline keyboard (approval cards, check-in prompt)."""
-    chat_id = chat_id or get_settings().telegram_chat_id
+    chat_id = chat_id or _default_chat()
     if not chat_id:
         return
     _send_html_or_plain(
@@ -201,10 +200,76 @@ async def _sync_and_report(chat_id: str) -> None:
         await send_message(chat_id, f"Sync FAILED: {first_line}")
 
 
-def _locked(chat_id: str) -> bool:
-    """Everything is locked to the single configured chat ID."""
+def _default_chat() -> str | None:
+    """Where an outbound message goes when no chat is named. Env first; falls back
+    to the paired chat so a paired install actually receives its briefs."""
+    env = get_settings().telegram_chat_id
+    if env:
+        return str(env)
+    from .db import SessionLocal
+    from . import telegram_link
+
+    db = SessionLocal()
+    try:
+        return telegram_link.bound_chat_id(db)
+    except Exception:  # noqa: BLE001 — no chat is better than a crashed beat
+        return None
+    finally:
+        db.close()
+
+
+def _locked(chat_id: str, db=None) -> bool:
+    """Everything is locked to the single bound chat ID. See telegram_link.
+
+    The environment variable is checked FIRST and without touching the database,
+    so the common configured case costs no query even for a rejected sender. Only
+    when it is unset do we consult the paired value.
+
+    An unbound bot returns False for EVERY sender. Unbound means nobody, never
+    everybody - this is the fail-closed direction and it is tested directly."""
     tg = get_settings().telegram_chat_id
-    return bool(tg) and chat_id == str(tg)
+    if tg:
+        return chat_id == str(tg)
+    if db is None:
+        return False
+    from . import telegram_link
+
+    bound = telegram_link.bound_chat_id(db)
+    return bool(bound) and chat_id == str(bound)
+
+
+def _gate(chat_id: str) -> bool:
+    """The gate, resolved synchronously. Opens a database session ONLY when the
+    environment variable is unset — the configured case costs no query, so a
+    stranger spamming the bot can't be used to keep a scale-to-zero database
+    awake. (telegram_link also caches the paired value for a minute.)"""
+    if get_settings().telegram_chat_id:
+        return _locked(chat_id)
+    from .db import SessionLocal
+
+    db = SessionLocal()
+    try:
+        return _locked(chat_id, db)
+    except Exception:  # noqa: BLE001 — a database blip must reject, never admit
+        logger.exception("Gate lookup failed; rejecting")
+        return False
+    finally:
+        db.close()
+
+
+def _try_pairing(chat_id: str, text: str) -> bool:
+    """Sync helper (opens its own session) so the async handler can offload it."""
+    from .db import SessionLocal
+    from . import telegram_link
+
+    db = SessionLocal()
+    try:
+        return telegram_link.try_pair(db, chat_id, text)
+    except Exception:  # noqa: BLE001 - a pairing failure must never open the gate
+        logger.exception("Pairing attempt failed")
+        return False
+    finally:
+        db.close()
 
 
 async def handle_update(update: dict) -> None:
@@ -217,7 +282,18 @@ async def handle_update(update: dict) -> None:
     if not message:
         return
     chat_id = str(message.get("chat", {}).get("id", ""))
-    if not _locked(chat_id):
+    if not await asyncio.to_thread(_gate, chat_id):
+        # Not the bound chat. Before ignoring, give the message one chance to be
+        # a pairing code — that is the ONLY way an unbound bot can ever acquire a
+        # chat, and it needs a code armed from the authenticated web app.
+        if await asyncio.to_thread(_try_pairing, chat_id, (message.get("text") or "")):
+            await send_message(
+                chat_id,
+                "Paired. This chat is now your coach — nobody else can reach it.\n\n" + COMMANDS,
+            )
+            return
+        # Silence, deliberately: replying would tell a prober that the bot exists,
+        # that a pairing is in progress, or that their guess was close.
         logger.info("Ignoring message from non-allowlisted chat %s", chat_id)
         return
 
@@ -297,7 +373,7 @@ def _status_text() -> str:
 
 
 def send_typing(chat_id: str | None = None) -> None:
-    _post_sync("sendChatAction", {"chat_id": chat_id or get_settings().telegram_chat_id, "action": "typing"})
+    _post_sync("sendChatAction", {"chat_id": chat_id or _default_chat(), "action": "typing"})
 
 
 def _send_debrief_prompt() -> None:
@@ -479,7 +555,7 @@ def _handle_context_callback(db, arg: str, chat_id: str, message_id, cb_id) -> N
 def _handle_callback(cb: dict) -> None:
     """Inline-button taps: approve/edit/reject a proposal, or a quick check-in."""
     chat_id = str((cb.get("message") or {}).get("chat", {}).get("id", ""))
-    if not _locked(chat_id):
+    if not _gate(chat_id):
         logger.info("Ignoring callback from non-allowlisted chat %s", chat_id)
         return
     cb_id = cb.get("id")

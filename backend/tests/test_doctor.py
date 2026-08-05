@@ -44,7 +44,6 @@ def test_a_fully_configured_install_has_no_failures():
 @pytest.mark.parametrize("broken,area", [
     ({"anthropic_api_key": ""}, "Anthropic"),
     ({"allowed_google_email": ""}, "Web gate"),
-    ({"telegram_chat_id": ""}, "Telegram gate"),
     ({"telegram_webhook_secret": ""}, "Telegram webhook"),
     ({"garth_token": ""}, "Garmin"),
     ({"secret_key": "dev-only-insecure-key"}, "Session key"),
@@ -121,3 +120,14 @@ def test_run_never_raises_even_with_nothing_configured(monkeypatch):
     monkeypatch.setattr(doctor, "_check_athlete", lambda r: None)  # no DB in tests
     monkeypatch.setattr("app.config.get_settings", lambda: Settings())
     assert doctor.run().render()
+
+
+def test_an_unpaired_bot_is_a_warning_not_a_failure():
+    """Since pairing shipped, no TELEGRAM_CHAT_ID means the bot answers nobody —
+    the safe state — rather than an open door. Reporting it as a failure would
+    push people to set the variable that makes pairing impossible."""
+    r = _run(_settings(telegram_chat_id=""))
+    row = _find(r, "Telegram gate")[0]
+    assert row[0] == doctor.WARN
+    assert "answers nobody" in row[2]
+    assert "Pair it from the Setup panel" in row[3]

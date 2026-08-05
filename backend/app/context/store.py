@@ -273,6 +273,10 @@ _INTERNAL_PREF_KEYS = {
     # same reason as the rotating token: it is a credential, and must never reach
     # the context panel or an LLM prompt.
     "garmin_bootstrap_token",
+    # The bound chat id and the armed pairing code. Internal because the code is a
+    # short-lived credential and the chat id is machine state neither the coach nor
+    # the context panel has any business seeing.
+    "telegram_bound_chat_id", "telegram_pair_code",
 }
 _INTERNAL_PREF_PREFIXES = ("alert_",)
 

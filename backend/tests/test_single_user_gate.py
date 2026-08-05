@@ -149,14 +149,35 @@ def test_production_refuses_to_boot_with_the_dev_bypass_set():
         s.validate_production()
 
 
-def test_production_refuses_to_boot_without_the_telegram_locks():
-    for missing in ("telegram_chat_id", "telegram_webhook_secret"):
-        kw = dict(app_env="production", allowed_google_email=ALLOWED, secret_key="x" * 32,
-                  database_url="postgresql+psycopg://u:p@h/db",
-                  telegram_chat_id="1", telegram_webhook_secret="s")
-        kw[missing] = ""
-        with pytest.raises(RuntimeError):
-            Settings(**kw).validate_production()
+def test_production_refuses_to_boot_without_the_webhook_secret():
+    """Without it the webhook route skips its HTTP-layer check, leaving forged
+    updates gated only by a guessable numeric chat id."""
+    kw = dict(app_env="production", allowed_google_email=ALLOWED, secret_key="x" * 32,
+              database_url="postgresql+psycopg://u:p@h/db",
+              telegram_chat_id="1", telegram_webhook_secret="")
+    with pytest.raises(RuntimeError, match="TELEGRAM_WEBHOOK_SECRET"):
+        Settings(**kw).validate_production()
+
+
+def test_production_may_boot_unbound_because_unbound_answers_nobody(monkeypatch):
+    """TELEGRAM_CHAT_ID stopped being a boot requirement when pairing shipped.
+
+    That is only safe because unbound fails CLOSED: with no env var and nothing
+    paired, the gate rejects every sender rather than admitting any. Requiring the
+    variable would make pairing impossible in production — the one place it
+    matters — so this asserts BOTH halves: the boot is allowed, and the gate that
+    boot leaves behind is shut."""
+    import app.telegram as tg
+
+    s = Settings(app_env="production", allowed_google_email=ALLOWED, secret_key="x" * 32,
+                 database_url="postgresql+psycopg://u:p@h/db",
+                 telegram_chat_id="", telegram_webhook_secret="s")
+    s.validate_production()          # must not raise
+
+    monkeypatch.setattr(tg, "get_settings", lambda: s)
+    # No env id and no db session -> nobody is admitted, including plausible ids.
+    for someone in ("1", "999", "", "111222333"):
+        assert tg._locked(someone) is False
 
 
 def test_a_valid_production_config_boots():

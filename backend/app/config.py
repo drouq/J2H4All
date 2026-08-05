@@ -121,8 +121,11 @@ class Settings(BaseSettings):
             problems.append("DATABASE_URL must be Postgres in production")
         if self.dev_auth_bypass_email:
             problems.append("DEV_AUTH_BYPASS_EMAIL must not be set in production")
-        if not self.telegram_chat_id:
-            problems.append("TELEGRAM_CHAT_ID is not set (bot lock)")
+        # TELEGRAM_CHAT_ID is deliberately NOT required. Since pairing shipped, an
+        # unbound bot answers NOBODY (telegram_link.bound_chat_id -> None ->
+        # _locked False for every sender), so booting unbound is the safe state
+        # rather than an open door. Requiring it would make pairing impossible in
+        # production, which is the only place it matters.
         if not self.telegram_webhook_secret:
             # Without it the webhook route skips its HTTP-layer check entirely,
             # leaving forged updates gated only by the guessable numeric chat id.

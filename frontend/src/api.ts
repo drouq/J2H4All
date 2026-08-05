@@ -407,3 +407,24 @@ export async function saveGarminToken(token: string): Promise<{ saved: boolean; 
   if (res.status === 422) throw new Error((await res.json()).detail ?? "Invalid token");
   return jsonOrThrow(res, "save garmin token");
 }
+
+export type TelegramLink = {
+  bound: boolean;
+  from_env: boolean;
+  pairable: boolean;
+  bot_configured: boolean;
+};
+
+export async function fetchTelegramLink(): Promise<TelegramLink> {
+  return jsonOrThrow(await fetch("/api/setup/telegram"), "telegram link");
+}
+
+export async function pairTelegram(): Promise<{ code: string; ttl_minutes: number }> {
+  const res = await fetch("/api/setup/telegram/pair", { method: "POST" });
+  if (res.status === 409) throw new Error((await res.json()).detail ?? "Already paired");
+  return jsonOrThrow(res, "pair telegram");
+}
+
+export async function unpairTelegram(): Promise<void> {
+  await jsonOrThrow(await fetch("/api/setup/telegram/unpair", { method: "POST" }), "unpair telegram");
+}

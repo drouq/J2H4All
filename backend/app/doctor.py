@@ -100,10 +100,14 @@ def _check_gates(s, r: Report) -> None:
               "Set it to the single Google account that owns this install.")
 
     if s.telegram_bot_token and s.telegram_chat_id:
-        r.add(OK, "Telegram gate", f"bot locked to chat {s.telegram_chat_id}")
+        r.add(OK, "Telegram gate", f"bot locked to chat {s.telegram_chat_id} (from the environment)")
     elif s.telegram_bot_token:
-        r.add(FAIL, "Telegram gate", "TELEGRAM_CHAT_ID is not set - the bot answers nobody",
-              "Message your bot, then read the chat id from getUpdates.")
+        # Not a failure since pairing shipped: unbound means the bot answers NOBODY,
+        # which is the safe state. The database half of this is reported by the
+        # Setup panel, which can see whether a chat is actually paired.
+        r.add(WARN, "Telegram gate", "no TELEGRAM_CHAT_ID - the bot answers nobody unless it has been paired",
+              "Pair it from the Setup panel (get a code, send it to your bot), or set "
+              "TELEGRAM_CHAT_ID, which always wins.")
     else:
         r.add(WARN, "Telegram", "not configured - no briefs, debriefs or approval cards",
               "Create a bot with @BotFather and set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID.")

@@ -327,3 +327,41 @@ def set_garmin_token(payload: GarminTokenIn, user: str = Depends(current_user),
                    "`python -m app.garmin.login` and copy the whole GARTH_TOKEN value.")
     ctx_store.stamp_meta(db, "garmin_bootstrap_token", blob)
     return {"saved": True, "env_overrides": bool(get_settings().garth_token)}
+
+
+@router.get("/setup/telegram")
+def telegram_link_status(user: str = Depends(current_user), db: Session = Depends(get_db)):
+    """Whether the bot is bound, and whether it CAN be paired from here."""
+    from . import telegram_link
+
+    env = bool(get_settings().telegram_chat_id)
+    return {
+        "bound": telegram_link.bound_chat_id(db) is not None,
+        "from_env": env,
+        "pairable": not env,
+        "bot_configured": bool(get_settings().telegram_bot_token),
+    }
+
+
+@router.post("/setup/telegram/pair")
+def telegram_pair(user: str = Depends(current_user), db: Session = Depends(get_db)):
+    """Arm a single-use pairing code.
+
+    Reaching this endpoint already required the web single-user gate (one
+    allowlisted Google account), so arming is an authenticated action. The code
+    itself is what the athlete then sends to their bot."""
+    from . import telegram_link
+
+    try:
+        return telegram_link.start_pairing(db)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@router.post("/setup/telegram/unpair")
+def telegram_unpair(user: str = Depends(current_user), db: Session = Depends(get_db)):
+    """Drop the binding. The bot then answers NOBODY until paired again."""
+    from . import telegram_link
+
+    telegram_link.unpair(db)
+    return {"bound": False}

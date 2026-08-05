@@ -2,11 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import {
   fetchGoal,
   fetchSetup,
+  fetchTelegramLink,
+  pairTelegram,
   saveGarminToken,
   saveGoal,
+  unpairTelegram,
   type GoalIn,
   type GoalView,
   type SetupStatus,
+  type TelegramLink,
 } from "./api";
 
 // The race formats the coach has doctrine for (backend coach/formats/). Kept as a
@@ -45,12 +49,15 @@ export default function SetupPanel() {
 
   const [form, setForm] = useState<Record<string, string>>({});
   const [token, setToken] = useState("");
+  const [tg, setTg] = useState<TelegramLink | null>(null);
+  const [pairCode, setPairCode] = useState<{ code: string; ttl_minutes: number } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [s, g] = await Promise.all([fetchSetup(), fetchGoal()]);
+      const [s, g, link] = await Promise.all([fetchSetup(), fetchGoal(), fetchTelegramLink()]);
       setStatus(s);
       setGoal(g);
+      setTg(link);
       setError(null);
       if (g.goal) {
         setForm((f) => ({
@@ -104,6 +111,33 @@ export default function SetupPanel() {
           ? "Saved — but GARTH_TOKEN is set in the environment and takes precedence."
           : "Garmin token saved.",
       );
+      await refresh();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onPair = async () => {
+    setBusy(true);
+    setSaved(null);
+    try {
+      setPairCode(await pairTelegram());
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onUnpair = async () => {
+    setBusy(true);
+    setSaved(null);
+    try {
+      await unpairTelegram();
+      setPairCode(null);
+      setSaved("Unlinked. The bot now answers nobody until you pair it again.");
       await refresh();
     } catch (e) {
       setError(String(e));
@@ -239,6 +273,44 @@ export default function SetupPanel() {
       <button onClick={onSaveToken} disabled={busy || !token.trim()}>
         {busy ? "Saving…" : "Save Garmin token"}
       </button>
+
+      <h3>Telegram</h3>
+      {!tg?.bot_configured && (
+        <p className="muted small">
+          No bot yet. Create one with @BotFather, set TELEGRAM_BOT_TOKEN, and come back —
+          you won't need to hunt for a chat ID.
+        </p>
+      )}
+      {tg?.bot_configured && tg.from_env && (
+        <p className="muted small">
+          Linked via TELEGRAM_CHAT_ID in the environment, which always wins. Unset it if you
+          want to pair from here instead.
+        </p>
+      )}
+      {tg?.bot_configured && !tg.from_env && tg.bound && (
+        <>
+          <p className="ok">✓ Linked to one chat. Every other sender is ignored.</p>
+          <button onClick={onUnpair} disabled={busy}>Unlink this chat</button>
+        </>
+      )}
+      {tg?.bot_configured && tg.pairable && !tg.bound && (
+        <>
+          <p className="muted small">
+            Get a code, then send it to your bot as a normal message. Until you do, the bot
+            answers nobody at all.
+          </p>
+          {pairCode ? (
+            <p>
+              Send <strong style={{ fontSize: "1.4em", letterSpacing: "0.15em" }}>{pairCode.code}</strong>{" "}
+              to your bot. Valid once, for {pairCode.ttl_minutes} minutes.
+            </p>
+          ) : (
+            <button onClick={onPair} disabled={busy}>
+              {busy ? "Working…" : "Get a pairing code"}
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

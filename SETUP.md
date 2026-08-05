@@ -136,15 +136,20 @@ This is where the coach actually reaches you.
 
 1. Message [@BotFather](https://t.me/BotFather), send `/newbot`, and copy the token into
    `TELEGRAM_BOT_TOKEN`.
-2. Send your new bot any message.
-3. Fetch your chat id and put it in `TELEGRAM_CHAT_ID`:
-   ```bash
-   curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
-   ```
-   Look for `"chat":{"id":...}`. **This is the single-user gate for Telegram** — every
-   other sender is silently ignored.
-4. Set `TELEGRAM_WEBHOOK_SECRET` to any random string.
-5. Once deployed, register the webhook:
+2. Set `TELEGRAM_WEBHOOK_SECRET` to any random string.
+3. Deploy, then **pair the bot from the Setup panel**: click "Get a pairing code" and send
+   the 8-digit code to your bot as an ordinary message. That binds it to your chat.
+
+   **The bot answers exactly one chat and silently ignores every other sender.** Until it
+   is paired it answers *nobody at all* — including you. That is deliberate: unbound fails
+   closed. The code is single-use, expires in 10 minutes, and can only be issued from the
+   web app, which is already behind your Google sign-in.
+
+   Prefer the old way? Set `TELEGRAM_CHAT_ID` (find it via
+   `curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"` and look for
+   `"chat":{"id":...}`). The environment variable **always wins** and disables pairing, so
+   an operator-set gate can't be changed from inside the app.
+4. Once deployed, register the webhook:
    ```bash
    curl -F "url=https://<your-app>/telegram/webhook" \
         -F "secret_token=<YOUR_WEBHOOK_SECRET>" \

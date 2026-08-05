@@ -34,8 +34,11 @@ These principles override convenience wherever they conflict with it.
 
 5. **Single user, hard gate.** *(Hard rule.)* Exactly one person gets in; everyone else
    bounces. Web is Google OAuth against a one-email allowlist (`ALLOWED_GOOGLE_EMAIL`);
-   Telegram is locked to one chat ID (`TELEGRAM_CHAT_ID`) and silently ignores every other
-   sender. There is no accounts system, no multi-tenancy, no sharing. **This is why
+   Telegram is locked to one chat and silently ignores every other sender. That chat comes
+   from `TELEGRAM_CHAT_ID` if set — which always wins — or from a pairing code issued by
+   the (already authenticated) web app. **Unbound means nobody, never everybody:** with
+   neither, the gate rejects every sender. See `telegram_link.py`, which documents the
+   design and the residual risk. There is no accounts system, no multi-tenancy, no sharing. **This is why
    self-hosting works so well: one deployment per person, complete data isolation by
    construction.**
 
