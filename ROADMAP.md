@@ -10,20 +10,21 @@ race format.
 
 ---
 
-## 1. Typed athlete profile *(blocks everyone)*
+## 1. Typed athlete profile — ✅ DONE
 
-Everything personal now reaches the coach through the context store — coaching notes,
-preferences, injuries, bloods, dietary profile — which works, but is unstructured and
-depends on the athlete thinking to mention things.
+`AthleteProfile` (migration 0015) carries name, pronouns, birthdate, language and a
+free-text `data_caveats` field for the physiology quirks that change how the data should be
+*read* rather than how the athlete should be trained. `doctrine.identity_line()` renders it
+onto both prompt surfaces, and `data_caveats` lands next to the generic sleep-composite rule
+it qualifies.
 
-**Wanted:** an `AthleteProfile` model carrying name, pronouns, birthdate, diet, language,
-and a free-text "data-reading caveats" field for physiology quirks that change how the data
-should be read (restless legs, shift work, a condition that wrecks sleep scores without
-wrecking recovery).
+The ~115 inherited gendered pronouns are gone from the prompts; static prose is neutral and
+the coach is told the athlete's actual pronouns, defaulting to they/them rather than
+guessing. `dietary_profile.diet` no longer defaults to one athlete's diet.
 
-**Why it matters beyond convenience:** the prompts still use **~115 gendered pronouns**
-(`he`/`his`/`him`) inherited from the original athlete. That is simply wrong for anyone
-else, and it can't be fixed until pronouns come from somewhere.
+Still open here: the profile is only writable through code. It needs to be settable from
+chat (extend the context extractor with a `profile` item kind) and from the web Context
+panel — folded into the onboarding work in §3.
 
 ## 2. Format-agnostic doctrine *(blocks non-backyard athletes)*
 

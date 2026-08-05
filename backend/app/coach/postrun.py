@@ -4,7 +4,7 @@ log a short read. Small deviations are *noted*, not re-planned — the weekly re
 
 Also owns the off-plan QUESTION (`ask_about_deviations`): when a session lands more
 than 20% off its prescription the coach asks what happened instead of inferring a
-cause, and his answer is stored on the result so every later surface reasons from
+cause, and their answer is stored on the result so every later surface reasons from
 the real reason. See `coach/completion.py` for why.
 """
 
@@ -25,18 +25,18 @@ logger = logging.getLogger(__name__)
 # The result we're awaiting an explanation for (internal KV, filtered from prompts).
 ASK_KEY = "awaiting_deviation_reason"
 # Longer than the debrief's 30 min: this question can land at any hour (it rides a
-# sync, not a beat), and he may only see it hours later. `looks_like_question` still
+# sync, not a beat), and they may only see it hours later. `looks_like_question` still
 # routes a genuine question past the capture.
 ASK_WINDOW = timedelta(hours=6)
 # Only ask about a session this recent — otherwise a first deploy, or a backfill,
-# would interrogate him about months of history.
+# would interrogate them about months of history.
 ASK_WITHIN_DAYS = 3
 
 READ_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
-        "read": {"type": "string", "description": "1-3 sentences: did he hit the session? over/under-cooked? HR drift vs target? Coach voice, concise."},
+        "read": {"type": "string", "description": "1-3 sentences: did they hit the session? over/under-cooked? HR drift vs target? Coach voice, concise."},
         "flagged": {"type": "boolean", "description": "True only if something ACUTE stands out — HR wildly high for the effort (illness?), a big shortfall, or a pattern worth a proactive check between weekly reviews."},
         "flag_reason": {"type": ["string", "null"], "description": "If flagged, the one-line reason; else null."},
     },
@@ -46,7 +46,7 @@ READ_SCHEMA = {
 def system_prompt(db, today: date | None = None) -> str:
     return (
         "You are the coach in J2H4All reading a single completed run against its plan. Give a brief, honest "
-        "read — did he hit it, over/under-cook it, any HR drift vs the target zone. When the `durability` "
+        "read — did they hit it, over/under-cook it, any HR drift vs the target zone. When the `durability` "
         "block is present, ground the drift comment in it: aerobic_decoupling_pct (>~5% on an easy run = "
         "notable cardiac drift / aerobic base still building; low = holding well) and pace_cv_pct (low = "
         "metronomic, the backyard-relevant trait). Don't recite every number — interpret, and when it's "
@@ -56,7 +56,7 @@ def system_prompt(db, today: date | None = None) -> str:
         "clear injury signal.\n\n"
         "A shortfall against the planned duration/distance is NOT by itself acute and NOT evidence of "
         "fatigue: you cannot see why a run ended early. State the gap as a fact, say the reason isn't "
-        "known yet, and leave it — a separate question asks him directly. Only flag it when a marker or "
+        "known yet, and leave it — a separate question asks them directly. Only flag it when a marker or "
         "the run's own HR/effort data actually shows something wrong.\n\n"
         + doctrine.compact_doctrine(db, today)
     )
@@ -99,7 +99,7 @@ def run_reads(db: DbSession, today: date | None = None, limit: int = 8) -> list[
                 "avg_hr": r.actual_avg_hr,
             },
             # >20% off the prescription. The gap is stated; the CAUSE is only ever
-            # `deviation_reason` (his words) — never inferred from the numbers.
+            # `deviation_reason` (their words) — never inferred from the numbers.
             "off_plan": completion.classify(session, r, today) == completion.PARTIAL,
             "deviation": completion.delta_line(session, r),
             "deviation_reason": r.deviation_reason,
@@ -162,7 +162,7 @@ def _arm_ask(db: DbSession, result_id: int) -> None:
 
 
 def record_reason(db: DbSession, result_id: int, text: str) -> SessionResult | None:
-    """Store his answer on the result, so the calendar, the weekly review and the
+    """Store their answer on the result, so the calendar, the weekly review and the
     red-flag path all reason from the stated reason instead of re-guessing."""
     r = db.get(SessionResult, result_id)
     if r is None:

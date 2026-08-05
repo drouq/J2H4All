@@ -2,7 +2,7 @@
 (§17) reviews the week's execution + recovery trend and *proposes* next-block
 session adjustments through the approval flow (§11) — never applied silently.
 
-Because the 30-day detail window means this can revise sessions he's already seen
+Because the 30-day detail window means this can revise sessions they've already seen
 (§9), the proposal must carry change-transparency: what changed and why.
 """
 
@@ -25,7 +25,7 @@ REVIEW_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string", "description": "3-5 sentence review for a Telegram/web card: how the week went (execution + recovery) and what you propose next. Coach voice."},
-        "change_note": {"type": "string", "description": "Explicit 'what changed and why' vs the sessions he's already seen (change-transparency, §9). If nothing material changes, say so."},
+        "change_note": {"type": "string", "description": "Explicit 'what changed and why' vs the sessions they've already seen (change-transparency, §9). If nothing material changes, say so."},
         "sessions": {
             "type": "array",
             "description": "The revised detailed sessions for the coming ~4 weeks — the full rolling window you were shown (include rest days). Same date format. Keep aligned with the macro phase.",
@@ -57,8 +57,8 @@ def system_prompt(db, today: date | None = None) -> str:
         + "\n\nReview the week's execution and recovery trend, weigh acute vs chronic load, HRV/resting-HR, "
         "sleep, subjective check-ins, and the calendar reality ahead (treadmill windows, travel, race "
         "proximity). `recent_plan_execution` shows the last two weeks planned-vs-done. It distinguishes "
-        "`missed` (the day closed with nothing against it — he may still run it, and it keeps its place on "
-        "his calendar) from `abandoned` (still undone after the grace window — gone, and treated as history). "
+        "`missed` (the day closed with nothing against it — they may still run it, and it keeps its place on "
+        "their calendar) from `abandoned` (still undone after the grace window — gone, and treated as history). "
         "Absorb both into the plan ahead, never compensate for them or schedule a make-up; a `skipped_optional` "
         "run is expected behaviour, not a miss at all. Then propose the next ~4 weeks of detailed sessions (the rolling "
         "30-day window you were shown), staying inside the current macro phase and applying the training "
@@ -67,7 +67,7 @@ def system_prompt(db, today: date | None = None) -> str:
         "starting TOMORROW at the earliest — never today or past days: today's session (done or not) stands, "
         "and past days are history, not something to re-plan. Be explicit about what changed "
         "and why. Conservative when recovery is down; don't chase a missed session with a bigger one. "
-        "`structural_agreements` are standing agreements with the athlete (e.g. his weekly run-frequency cap, "
+        "`structural_agreements` are standing agreements with the athlete (e.g. their weekly run-frequency cap, "
         "'[Optional]' marking, gym structure, long-run day) — they are BINDING on every week you propose, "
         "including weeks you'd otherwise carry over unchanged: carry-over is never a reason to keep a "
         "non-compliant week. If the inherited plan violates an agreement, restructure it and say so in the "
@@ -78,7 +78,7 @@ def system_prompt(db, today: date | None = None) -> str:
         "and each other agreement's sessions (e.g. gym days) by date. Do not assert compliance without the "
         "dates to show it; if the tally exposes a violation, fix the sessions and redo the tally. "
         "Use the `data_freshness` block to judge how much to trust the recovery read: if HRV/readiness are "
-        "several days old (the athlete syncs his watch irregularly), lean on execution + check-ins and don't "
+        "several days old (the athlete syncs their watch irregularly), lean on execution + check-ins and don't "
         "over-fit the plan to a stale recovery number — say so in the change_note when it matters."
     )
 

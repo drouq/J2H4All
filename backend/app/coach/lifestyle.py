@@ -17,11 +17,11 @@ from ..util import utcnow as _utcnow
 
 # One-tap life flags for the debrief card. Garmin's native Lifestyle Logging is
 # blocked (mobile-only, undocumented), and the typed fallback captured exactly ONE
-# row in six weeks (found 2026-08-03): he answers the debrief with the feel emoji
+# row in six weeks (found 2026-08-03): they answer the debrief with the feel emoji
 # and almost never types a line, so the flags the coach most needs for recovery
 # attribution — and the illness red-flag hook — were never arriving. A tap costs
 # nothing and fills the same `data` fields the LLM parse would. The value says
-# "(tapped)" so the coach reads it as a flag with no detail, not as his words.
+# "(tapped)" so the coach reads it as a flag with no detail, not as their words.
 TAPS = {
     "alcohol": {"label": "🍺 Drinks", "value": "drank today (tapped, no detail)"},
     "illness": {"label": "🤒 Run down", "value": "feeling run down or ill (tapped, no detail)"},

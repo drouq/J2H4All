@@ -3,8 +3,8 @@
 Why they exist (2026-08-03): a zone/pace target is wrong at both ends of a session,
 because HR lags the effort. At the START the target armed at second one, so the watch
 alerted ~10 s in — and a gentler target is NOT a fix, since HR starts below Z1 too. At
-the END, coming off threshold work his HR takes minutes to fall through a Z1 cooldown
-ceiling, so the cooldown step alerts him for being ABOVE target while his body is doing
+the END, coming off threshold work their HR takes minutes to fall through a Z1 cooldown
+ceiling, so the cooldown step alerts them for being ABOVE target while their body is doing
 exactly the right thing.
 
 Why they're CARVED OUT rather than added on top (the coach's call, asked with full
@@ -63,7 +63,7 @@ def test_plain_run_opens_target_free_and_keeps_its_total():
 
 def test_a_plain_run_gets_no_trailing_free_step():
     """Asked and DECLINED by the coach: there is no alert to fix at the end of an easy
-    run (he's already in zone), so a cooldown step would be clutter on every run
+    run (they's already in zone), so a cooldown step would be clutter on every run
     forever — and it costs most where it helps least. Guards the decision, not a bug."""
     steps = _steps(workouts.build_workout(
         {"title": "Easy Aerobic", "duration_min": 55, "target_zone": "Z2"}))
@@ -168,8 +168,8 @@ def test_lead_in_is_carved_from_inside_a_prescribed_warmup():
 
 
 def test_a_prescribed_cooldown_opens_target_free():
-    """The mirrored bug: off 5x4min at threshold his HR is 165-175 and takes minutes to
-    fall through the Z1 ceiling, so the cooldown alerted him for recovering correctly.
+    """The mirrored bug: off 5x4min at threshold their HR is 165-175 and takes minutes to
+    fall through the Z1 ceiling, so the cooldown alerted them for recovering correctly.
     15 min Z1 becomes 5 free + 10 Z1 — same 15 minutes, same session total."""
     steps = _steps(workouts.build_workout(_intervals()))
     cooldowns = [s for s in steps if _kind(s) == "cooldown"]
@@ -229,7 +229,7 @@ def test_step_order_stays_sequential_through_the_repeat_block():
 
 
 def test_structure_leading_with_a_repeat_is_prefixed_not_carved():
-    """Can't carve out of a repeat block — prepend rather than leave him alerted."""
+    """Can't carve out of a repeat block — prepend rather than leave them alerted."""
     steps = _steps(workouts.build_workout({
         "title": "Odd", "duration_min": 30,
         "structure": [{"kind": "repeat", "times": 3, "steps": [

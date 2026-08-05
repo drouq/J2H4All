@@ -85,7 +85,7 @@ def extract_context(
     from .coach.schedule import local_today
     try:
         # Anchor relative dates ("tomorrow") on HIS local day (PRD §16), like the
-        # Telegram arm — a UTC anchor mis-dates windows/injuries in his 00:00-08:00 window.
+        # Telegram arm — a UTC anchor mis-dates windows/injuries in their 00:00-08:00 window.
         items = ctx_extract.extract_items(body.text, local_today(db), state.timezone)
     except LLMNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc))

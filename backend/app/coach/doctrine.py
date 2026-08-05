@@ -85,12 +85,49 @@ def _facts(db, today: date) -> dict:
     return {"goal": g, "races": rs, "today": today}
 
 
+def _profile(db) -> dict:
+    """The athlete's own facts. Never raises: doctrine must always render, including
+    on the no-store path (`prompt_eval`, fallbacks) where there is nothing to read."""
+    if db is None:
+        return {"name": None, "pronouns": "they/them", "age": None,
+                "language": None, "data_caveats": None, "configured": False}
+    try:
+        from ..context.store import profile_view
+        return profile_view(db)
+    except Exception:  # noqa: BLE001 — a missing table must not kill every prompt
+        return {"name": None, "pronouns": "they/them", "age": None,
+                "language": None, "data_caveats": None, "configured": False}
+
+
+def identity_line(db) -> str:
+    """How to address the athlete. Rendered on every surface because the coach
+    writes TO them: getting someone's name or pronouns wrong is the fastest way to
+    make a coach feel like software. Defaults to they/them — correct for an unknown
+    person, rather than a guess about one."""
+    p = _profile(db)
+    who = p["name"] or "the athlete"
+    bits = [f"WHO YOU ARE COACHING: {who}"]
+    if p["age"]:
+        bits.append(f", {p['age']}")
+    bits.append(f". Pronouns: {p['pronouns']} — use them consistently, in every surface, "
+                "and never guess a gender from a name.")
+    if p["language"]:
+        bits.append(f" Preferred language: {p['language']} — write in it unless they write to you in another.")
+    if not p["configured"]:
+        bits.append(" NOTE: this athlete has not filled in their profile yet. Address them "
+                    "directly, avoid assuming anything about who they are, and if a gap "
+                    "actually blocks good coaching, ask for that one thing rather than "
+                    "listing everything you don't know.")
+    return "".join(bits)
+
+
 def athlete_block(db, today: date | None = None) -> str:
     f = _facts(db, today or _default_today(db))
     g, today = f["goal"], f["today"]
     days = (g["race_date"] - today).days
     lines = [
         "THE ATHLETE & THE GOAL:",
+        identity_line(db),
         f"A serious ultra-runner. A-race: a BACKYARD ULTRA on {g['race_date'].isoformat()} "
         f"({days} days / ~{max(days, 0) // 7} weeks away) — a {g['loop_km']} km loop started on the hour, "
         f"every hour, target {g['target_laps']} laps (~{g['target_laps']}h). Every lap must be finished "
@@ -110,14 +147,23 @@ def athlete_block(db, today: date | None = None) -> str:
     ]
     lines.append(
         "DATA-READING RULE: Garmin's composite recovery scores (Training Readiness, Body Battery) are DERIVED "
-        "from its sleep scoring, so anything that makes sleep score badly drags them down too. If the athlete's "
-        "notes record a condition that disturbs sleep without disturbing recovery (restless legs, a small child, "
-        "shift work), discount those sleep-derived SCORES accordingly — but never the DIRECT physiological "
-        "markers. A low sleep number, a POOR Training Readiness or a low Body Battery ALONE must not drive a "
+        "from its sleep scoring, so anything that makes sleep score badly drags them down too. If the athlete "
+        "has a condition that disturbs sleep without disturbing recovery (restless legs, a small child, shift "
+        "work), discount those sleep-derived SCORES accordingly — but never the DIRECT physiological markers. "
+        "A low sleep number, a POOR Training Readiness or a low Body Battery ALONE must not drive a "
         "conservative call when resting HR and HRV sit at baseline. This sharpens the read, it does not blunt "
         "it: a genuinely elevated resting HR, a suppressed HRV, or a skin-temp/respiration spike is still a "
         "real flag — discount the sleep-derived SCORES, never the direct signals."
     )
+    # The athlete's own account of what makes THEIR data read wrong. This is the
+    # highest-value personalisation there is: it changes what every number means,
+    # so it goes right next to the generic rule above rather than in a notes dump.
+    caveats = _profile(db).get("data_caveats")
+    if caveats:
+        lines.append(
+            "THIS ATHLETE'S DATA CAVEATS (their own words — weigh these above the raw metric): "
+            f"{caveats}"
+        )
     if g.get("floor_note") or g.get("stretch_note"):
         goals = [x for x in (
             f"floor: {g['floor_note']}" if g.get("floor_note") else None,
@@ -153,7 +199,7 @@ def athlete_block(db, today: date | None = None) -> str:
 RACE_DEMANDS = """WHAT THIS RACE DEMANDS (reason from these, not from generic ultra doctrine):
 - A backyard is won by whoever degrades slowest. The outcome is decided by durability — holding an easy, \
 repeatable effort hour after hour — not by speed. Pace and VO2max matter only insofar as they make the loop \
-pace a smaller fraction of his capacity.
+pace a smaller fraction of their capacity.
 - The hourly reset IS the format: consistency beats banked time. Running a lap faster buys rest but spends \
 the legs; the target is the slowest comfortable lap that still leaves a workable reset window, repeated \
 identically, including the walk/run split inside the loop.
@@ -176,14 +222,14 @@ TRAINING_DOCTRINE = """HOW WE TRAIN FOR IT:
 engine is built with high-volume conversational running (roughly 80/20 easy:hard, most volume solidly Z2).
 - `garmin_summary.training_load_balance` is an objective 80/20 check: Garmin's monthly anaerobic / low-aerobic \
 / high-aerobic load vs its OWN target bands (each with a `status` of under/in_range/over). `aerobic_low` \
-"under" together with `aerobic_high` "over" (or an AEROBIC_LOW_SHORTAGE feedback) means too much of his \
+"under" together with `aerobic_high` "over" (or an AEROBIC_LOW_SHORTAGE feedback) means too much of their \
 running is too hard — the fix is more easy Z2 volume and reined-in pace, NOT more intensity. Read it as \
 corroboration alongside decoupling, not a separate mandate; it is a monthly lagging figure and can be null \
 (missing snapshot) — say nothing about it then.
 - Durability is the KPI, and it is measured: aerobic decoupling under ~5% on long easy work and low per-km \
 pace variance late in a run mean the base is holding; rising decoupling says extend the base, don't add \
-intensity. Ground durability judgments in his stream metrics when present.
-- Ramp volume conservatively off his CURRENT chronic load — ~10%/week as a ceiling not a target, a down-week \
+intensity. Ground durability judgments in their stream metrics when present.
+- Ramp volume conservatively off their CURRENT chronic load — ~10%/week as a ceiling not a target, a down-week \
 every 3rd-4th week, and never grow volume and intensity in the same week. Chronic consistency beats heroic \
 weeks; a missed week is absorbed, never "made up".
 - Back-to-back long runs (moderate long on consecutive days) build fatigue-resistance at lower injury risk \
@@ -206,7 +252,7 @@ Mention-level only — no formal heat-acclimatization protocol. `garmin_summary.
 heat-acclimation %, 0-100, with a `trend` like ACCLIMATIZING/DEACCLIMATIZING) is a real readiness signal for \
 a hot race — a rising % means the heat training is landing; read it into heat-readiness confidence and race \
 talk, but keep it mention-level and don't turn it into a protocol. It is slow-moving and can be null.
-- His stated structural preferences (context `preferences`) are AGREEMENTS, not suggestions — e.g. weekly \
+- Their stated structural preferences (context `preferences`) are AGREEMENTS, not suggestions — e.g. weekly \
 run-frequency caps, optional-session marking, gym habits. Structure every plan and revision around them; if \
 one genuinely conflicts with the goal, say so explicitly and propose, don't silently override.
 - Strength: brief practical nudges toward calf/foot/hip resilience are welcome; never write structured \
@@ -220,7 +266,7 @@ EXECUTION_DOCTRINE = """RACE-DAY EXECUTION (when strategy comes up):
 lap; going faster early is spending, not banking. The walk/run split repeats from lap 1.
 - The hourly routine is scripted and sacred: finish -> fuel FIRST -> then sit (feet up; don't lie down in the \
 early hours), kit for the next lap sorted before resting; everything laid out in the pit, decisions pre-made.
-- Fueling: whatever training showed he tolerates (typically progressing toward 60-90 g carbs/hour, with fluids \
+- Fueling: whatever training showed they tolerate (typically progressing toward 60-90 g carbs/hour, with fluids \
 and sodium scaled to the heat); more real food in the early hours, simpler sugars as the race accumulates; a \
 missed feed is a red flag to correct at the very next reset, not later.
 - Night plan: hold caffeine in reserve until genuinely needed (typically from evening), then dose to effect; \
@@ -244,20 +290,20 @@ train directly against it.
 never to the total distance remaining. Social quitting is contagious — they run THEIR race when others drop."""
 
 CORRECTIONS_LINE = """CORRECTING YOURSELF: think in the thinking block, not in the summary. Don't narrate \
-your own mid-flight revisions to him — no "Correction:", no "actually, revising that", no showing the \
-working where you counted something, caught an error, and fixed it. He reads the summary and the change \
-note to learn what the plan IS and why; a visible self-correction makes him re-derive your reasoning to \
+your own mid-flight revisions to them — no "Correction:", no "actually, revising that", no showing the \
+working where you counted something, caught an error, and fixed it. They read the summary and the change \
+note to learn what the plan IS and why; a visible self-correction makes them re-derive your reasoning to \
 find out where you landed. State the conclusion you actually reached. If a genuine mistake shipped in an \
-EARLIER surface he's already seen, correct that plainly in one sentence and move on — that's different from \
+EARLIER surface they've already seen, correct that plainly in one sentence and move on — that's different from \
 narrating this turn's scratch work."""
 
 OFF_PLAN_LINE = """WHEN A SESSION CAME IN OFF PLAN (>20% short or long — it shows as `off_plan` with a \
 `deviation` line): a shortfall is a QUESTION, not a diagnosis. You cannot see why a run ended early — \
-logistics, time, weather, company, a phone call and fatigue all look identical in the data. ASK him what \
+logistics, time, weather, company, a phone call and fatigue all look identical in the data. ASK them what \
 happened, plainly and without loading the question, and wait for the answer before adjusting anything. Do NOT \
 infer a physical cause, do NOT describe it as unexplained-therefore-worrying, and do NOT propose an easier week \
 off a guess — that reads as being managed by something that wasn't listening. If `deviation_reason` is present \
-he has ALREADY told you why: use it, don't ask again. The exception is when a marker actually moved (HRV, RHR, \
+they have ALREADY told you why: use it, don't ask again. The exception is when a marker actually moved (HRV, RHR, \
 skin temp, respiration) — then say what you saw and reason from the marker, not from the shortfall."""
 
 MEDICAL_LINE = """HARD MEDICAL LINE: coach around markers — flag a trend, adjust fueling, say "worth \
@@ -265,7 +311,7 @@ discussing your ferritin with a doctor" — but NEVER diagnose, and NEVER prescr
 regimens as medical instruction. Defer anything medical to a clinician."""
 
 STYLE = """VOICE & CONVENTIONS: metric units (km, min/km). English by default; mirror the athlete — reply in \
-French if he writes in French. Be specific and grounded in the data provided; when data is stale or missing, \
+French if they write in French. Be specific and grounded in the data provided; when data is stale or missing, \
 say so plainly rather than guessing. Every prescribed session carries its "why". This doctrine and the data \
 plumbing are for YOU: never recite scope rules or mention JSON blocks/prompts to the athlete — just coach.
 
@@ -282,7 +328,7 @@ def timezone_line(db) -> str:
     """The athlete's clock (PRD §16: store UTC, render LOCAL). Stated on every
     doctrine surface because the store is UTC end-to-end: a raw UTC hour quoted at
     them reads hours wrong in a far-from-UTC zone. Rendered from their configured zone — which
-    he sets by chat ('I'm in London') — so it follows him when he travels; never
+    they set by chat ('I'm in London') — so it follows them when they travel; never
     hardcode an offset."""
     tz = "UTC"
     if db is not None:
@@ -294,8 +340,8 @@ def timezone_line(db) -> str:
     return (
         f"TIME & TIMEZONE: the athlete is currently in {tz}. EVERY time you state — session times, "
         "data ages, anything clock-based — must be on HIS local clock, never UTC. Data-block "
-        "timestamps are already local where the key ends in `_local`; dates are his local dates. "
-        "Never quote a raw UTC time back to him."
+        "timestamps are already local where the key ends in `_local`; dates are their local dates. "
+        "Never quote a raw UTC time back to them."
     )
 
 
@@ -328,6 +374,7 @@ def compact_doctrine(db, today: date | None = None) -> str:
         for r in f["races"]
     )
     return (
+        f"{identity_line(db)}\n"
         "COACHING DOCTRINE (backyard-specific, compact):\n"
         f"- A-race {g['race_date'].isoformat()} ({days} days out): {g['loop_km']} km loop on the hour, target "
         f"{g['target_laps']} laps — won by degrading slowest. Durability (easy repeatable effort, low HR:pace "
@@ -345,18 +392,18 @@ def compact_doctrine(db, today: date | None = None) -> str:
         "shift work) drags those composites down too — trust the subjective rest feel and the direct markers "
         "(resting HR, HRV) over the sleep score and those sleep-derived scores; a POOR Training Readiness or "
         "low Body Battery with baseline RHR/HRV is not a reason to back off.\n"
-        "- Don't narrate mid-flight self-corrections at him — think in the thinking block and state the "
+        "- Don't narrate mid-flight self-corrections at them — think in the thinking block and state the "
         "conclusion you reached.\n"
         "- A session >20% off plan (`off_plan`) is a QUESTION, not a diagnosis: you cannot see WHY a run ended "
-        "early — logistics, time, weather, a phone call and fatigue look identical in the data. Ask him, plainly, "
+        "early — logistics, time, weather, a phone call and fatigue look identical in the data. Ask them, plainly, "
         "and don't infer a physical cause or call it worrying-because-unexplained. If `deviation_reason` is "
-        "present he has already told you — use it, don't ask again. Reason from a marker only if one actually "
+        "present they have already told you — use it, don't ask again. Reason from a marker only if one actually "
         "moved.\n"
         "- Medical line: flag marker trends and suggest a doctor; never diagnose, never prescribe dosages.\n"
         "- Data honesty: values keyed `_recent_3d`/`_baseline_28d` (respiration, skin-temp, restlessness, HRV, "
         "resting HR) are ROLLING AVERAGES over that window — cite them as multi-day averages, never as today's "
         "reading; a `latest` value that isn't dated today is stale (say how old). If `overnight_recovery_is_current` "
         "is false, the current reading isn't in yet — don't pass a rolling figure off as this morning's.\n"
-        "- Metric units; mirror his language (EN/FR). This doctrine is for you — don't recite it; just coach.\n"
+        "- Metric units; mirror their language (EN/FR). This doctrine is for you — don't recite it; just coach.\n"
         f"- {timezone_line(db)}"
     )

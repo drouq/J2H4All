@@ -4,7 +4,7 @@ Web = Google OAuth + a one-email allowlist; Telegram = one chat-ID lock. The
 approval gate has had thorough coverage since Phase 3; this one had NONE until
 2026-08-03, which is the wrong asymmetry: both are hard rules, and this is the one
 where a quietly inverted condition hands a stranger the athlete's medical history
-and his coach's write access to his calendar. The logic is small — that is exactly
+and their coach's write access to their calendar. The logic is small — that is exactly
 why it needs locking down rather than re-reading.
 """
 import pytest

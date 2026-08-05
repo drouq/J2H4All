@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from ..util import utcnow as _utcnow
 
 from ..models import (
+    AthleteProfile,
     AvailabilityWindow,
     BloodMarker,
     DietaryProfile,
@@ -121,8 +122,11 @@ def _apply_injury(db: Session, item: dict, today: date) -> None:
 def _apply_dietary(db: Session, item: dict) -> None:
     profile = db.scalar(select(DietaryProfile).limit(1))
     if profile is None:
-        profile = DietaryProfile(diet="vegetarian", updated_at=_utcnow())
+        # 'unspecified' until the athlete says otherwise — never assume a diet.
+        profile = DietaryProfile(diet=item.get("diet") or "unspecified", updated_at=_utcnow())
         db.add(profile)
+    elif item.get("diet"):
+        profile.diet = item["diet"]
     note = item.get("text")
     if note:
         profile.notes = f"{profile.notes}\n{note}" if profile.notes else note
@@ -166,6 +170,67 @@ def get_or_create_state(db: Session) -> UserState:
         db.add(state)
         db.commit()
     return state
+
+
+# ------------------------------------------------------------------ athlete profile
+
+# Fields an athlete may set about themselves. Anything not here is either derived
+# (age), lives in the context store as free text (history, physiology), or is
+# machine state that must never be writable from chat.
+PROFILE_FIELDS = ("name", "pronouns", "birthdate", "language", "data_caveats")
+
+
+def get_or_create_profile(db: Session) -> AthleteProfile:
+    """The single athlete-profile row. Created empty — an install with no profile
+    is a valid state (the coach says what it doesn't know), not an error."""
+    profile = db.get(AthleteProfile, 1)
+    if profile is None:
+        profile = AthleteProfile(id=1, pronouns="they/them", updated_at=_utcnow())
+        db.add(profile)
+        db.commit()
+    return profile
+
+
+def set_profile(db: Session, **fields) -> AthleteProfile:
+    """Merge-update the profile. Skips None so a partial update (a chat message
+    that only mentions a name) can't blank the fields it didn't mention — the
+    same skip-nulls contract as the check-in and lifestyle upserts."""
+    profile = get_or_create_profile(db)
+    for key, value in fields.items():
+        if key not in PROFILE_FIELDS:
+            raise ValueError(f"unknown athlete-profile field: {key!r}")
+        if value is None:
+            continue
+        if key == "pronouns" and not str(value).strip():
+            continue  # nullable=False; an empty string would break the default
+        setattr(profile, key, value)
+    profile.updated_at = _utcnow()
+    db.commit()
+    return profile
+
+
+def profile_view(db: Session) -> dict:
+    """Profile as plain data, for prompts and the web panel. `age` is derived so
+    nothing downstream has to know today's date or re-implement the arithmetic."""
+    from ..coach.schedule import local_today
+
+    p = db.get(AthleteProfile, 1)
+    if p is None:
+        return {"name": None, "pronouns": "they/them", "age": None,
+                "language": None, "data_caveats": None, "configured": False}
+    age = None
+    if p.birthdate:
+        today = local_today(db)
+        age = today.year - p.birthdate.year - (
+            (today.month, today.day) < (p.birthdate.month, p.birthdate.day)
+        )
+    return {
+        "name": p.name, "pronouns": p.pronouns or "they/them", "age": age,
+        "language": p.language, "data_caveats": p.data_caveats,
+        # A profile row can exist and still be empty (created by get_or_create).
+        # `configured` is what onboarding and the doctrine key off, not existence.
+        "configured": bool(p.name or p.birthdate or p.data_caveats),
+    }
 
 
 def set_timezone(db: Session, tz: str) -> None:
@@ -249,7 +314,9 @@ def snapshot(db: Session) -> dict:
 
     return {
         "timezone": state.timezone,
-        "diet": {"diet": profile.diet, "notes": profile.notes} if profile else {"diet": "vegetarian", "notes": None},
+        "diet": {"diet": profile.diet, "notes": profile.notes} if profile else {"diet": "unspecified", "notes": None},
+        # Who the athlete is, so the web panel and the prompts read the same source.
+        "athlete": profile_view(db),
         "blood_markers": list(latest.values()),
         "availability_windows": [
             {"id": w.id, "type": w.type, "start_date": w.start_date.isoformat(),

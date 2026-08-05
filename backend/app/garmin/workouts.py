@@ -87,39 +87,39 @@ def _end_fields(duration_min, distance_km) -> dict:
 
 # ------------------------------------------------------- target-free ease in / ease out
 # A zone (or pace) target is wrong at BOTH ends of a session, for the same underlying
-# reason: HR lags the effort, so the watch alerts him for the gap while his body is
+# reason: HR lags the effort, so the watch alerts them for the gap while their body is
 # doing exactly the right thing.
 #
 #   START — the target used to arm at second one, so the watch alerted ~10 s in.
 #           Nobody is in Z2 ten seconds into a run. A gentler target is NOT a fix:
 #           HR starts BELOW Z1 too, so a Z1 warmup alerts identically.
-#   END   — coming off 5x4 min at threshold his HR is 165-175 and takes minutes to
-#           fall through a Z1 cooldown ceiling, so the cooldown step alerts him for
+#   END   — coming off 5x4 min at threshold their HR is 165-175 and takes minutes to
+#           fall through a Z1 cooldown ceiling, so the cooldown step alerts them for
 #           being ABOVE target. The coach rates this the worse of the two: at the
-#           start he is fresh and can shrug at a beep; at the end he is tired and hot,
-#           and the watch is teaching him that recovering is a failure state.
+#           start they is fresh and can shrug at a beep; at the end they is tired and hot,
+#           and the watch is teaching them that recovering is a failure state.
 #
 # So both ends get a TARGET-FREE step, always CARVED OUT of the step it belongs to,
 # never added on top (the coach's call, 2026-08-03, asked with full doctrine + live
-# prod state). His prescription is a total-duration one — "55 min Z2" means 55 minutes
+# prod state). Their prescription is a total-duration one — "55 min Z2" means 55 minutes
 # of running, and the first five were never actually Z2 anyway — so carving changes the
 # alerting, not the training. Adding on top would make every session run ~5 min long by
 # design: a 3h00 long run filing as 3h05, invisible extra volume that never trips the
 # >20% AND >15 min off-plan question, in a rebuild block where the ~10%/week ceiling
 # only means anything if the numbers are honest. One number at both ends, deliberately:
-# nothing for him to remember.
+# nothing for them to remember.
 #
 # NB the ease-out fires ONLY on a cooldown the coach actually prescribed. Plain easy and
 # long runs get NO trailing free step — asked and declined explicitly: there is no alert
-# to fix at the end of an easy run (he is already in zone), it would be a step he looks
+# to fix at the end of an easy run (they is already in zone), it would be a step it looks
 # at on every run forever to change nothing, and it costs most where it helps least — a
 # 30 min recovery jog would become 5 free + 20 Z1 + 5 free, stripping the ceiling out of
 # the one session whose entire purpose is holding it. On the long runs the coach also
 # wants the final half-hour governed by HIM holding pace and HR flat (the durability KPI
-# for this race, and his last two long runs drifted late) — a free step there would
-# legitimise exactly the fade he's coaching out.
-EASE_MIN = 5.0   # minutes — long enough that HR has arrived (or fallen), in his heat
-EASE_KM = 0.8    # ≈ EASE_MIN at his easy pace, for a distance-ended step
+# for this race, and their last two long runs drifted late) — a free step there would
+# legitimise exactly the fade they's coaching out.
+EASE_MIN = 5.0   # minutes — long enough that HR has arrived (or fallen), in their heat
+EASE_KM = 0.8    # ≈ EASE_MIN at their easy pace, for a distance-ended step
 
 
 def _has_target(step: dict) -> bool:

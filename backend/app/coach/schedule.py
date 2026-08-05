@@ -1,5 +1,5 @@
 """Local-clock dispatcher (PRD §16): a fixed-interval cron can't know the user's
-local morning, so a frequent `tick` computes his local time (from user_state.timezone)
+local morning, so a frequent `tick` computes their local time (from user_state.timezone)
 and fires each beat at its configured local hour, at most once per local day.
 
 - morning brief  → daily at morning_brief_hour:morning_brief_minute (10:00 local —
@@ -59,7 +59,7 @@ def local_now(db: DbSession) -> datetime:
 
 def to_local(db: DbSession, dt: datetime) -> datetime:
     """Render a stored UTC timestamp on the athlete's clock (PRD §16: store UTC,
-    render local). Any time shown to him must go through this — a bare UTC hour
+    render local). Any time shown to them must go through this — a bare UTC hour
     reads up to a day wrong in a far-from-UTC zone. Naive input is assumed UTC (SQLite
     round-trips DateTime(timezone=True) as naive)."""
     if dt.tzinfo is None:

@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     # Workout push (docs/garmin-workout-push-plan.md): approved sessions become
     # scheduled Garmin structured workouts. **LIVE in prod since 2026-07** — the
     # single-session verification passed and the dashboard sets this true on the web
-    # service. The default stays False so a fresh/dev environment can't write to his
+    # service. The default stays False so a fresh/dev environment can't write to their
     # real Garmin account by accident; don't read it as "not shipped yet".
     garmin_workout_push_enabled: bool = False
 

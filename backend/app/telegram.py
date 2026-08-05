@@ -356,7 +356,7 @@ def _handle_free_text(text: str) -> None:
             # The Edit tap's proposal was resolved after the tap — don't swallow this
             # message; fall through to handle it as a debrief / coaching message.
 
-        # A reply to the off-plan question ("why did Saturday come in short?") is his
+        # A reply to the off-plan question ("why did Saturday come in short?") is their
         # REASON — store it on the result, then let the coach answer it normally, with
         # the stated cause now in the record. This is the whole point of asking: the
         # adaptation that follows is built on what happened, not on an inference.
@@ -365,7 +365,7 @@ def _handle_free_text(text: str) -> None:
         # is what triggers this question, so at 22:00 both flags are armed seconds apart
         # — and one message can't be both "why Saturday was short" and tonight's feel
         # log. Answering the specific question wins; the debrief prompt stays armed for
-        # his next line, and its card is still tappable either way.
+        # their next line, and its card is still tappable either way.
         captured_deviation = False
         if not looks_like_question(text):
             rid = postrun.pending_ask(db)
@@ -506,7 +506,7 @@ def _handle_callback(cb: dict) -> None:
                 ack = f"{label} ✓" if on else f"{label} — removed"
             set_awaiting(db, debrief.AWAITING_KEY)  # refresh window so a follow-up line still folds in
             answer_callback(cb_id, ack)
-            # Buttons stay live: the card asks two separate questions and he may
+            # Buttons stay live: the card asks two separate questions and they may
             # want to tap several (or correct one) before typing anything.
             text, keyboard = debrief.render_card(db)
             edit_message_card(chat_id, message_id, text, keyboard)

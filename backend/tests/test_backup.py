@@ -1,4 +1,4 @@
-"""The monthly Drive export (PRD §15) — the athlete's data in his own hands, and the
+"""The monthly Drive export (PRD §15) — the athlete's data in their own hands, and the
 only copy of the coach's state that doesn't live on Render.
 
 Untested until 2026-08-03, and it had been failing since its first scheduled run: the

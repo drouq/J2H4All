@@ -90,7 +90,7 @@ def goal_view(db: DbSession, today: date | None = None) -> dict:
     ensure_seed(db)
     goal = db.scalar(select(Goal).where(Goal.status == "active").limit(1))
     races = db.scalars(select(SecondaryRace).order_by(SecondaryRace.date)).all()
-    today = today or local_today(db)  # his local day (PRD §16), not server UTC
+    today = today or local_today(db)  # their local day (PRD §16), not server UTC
     return {
         "goal": {
             "format": goal.format, "loop_km": goal.loop_km, "target_laps": goal.target_laps,
@@ -138,7 +138,7 @@ def apply_sessions(db: DbSession, sessions: list[dict], macro_plan_id: int | Non
     from ..garmin.workouts import PUSH_TYPES
     from ..coach.schedule import local_today
 
-    today = local_today(db)  # his local day (PRD §16) — a UTC 'today' would, in his
+    today = local_today(db)  # their local day (PRD §16) — a UTC 'today' would, in their
     # 00:00-08:00 window, drop/keep the wrong day and orphan a completed session's result.
     # Never re-issue the past, and never supersede a session already RUN today —
     # approving a Sunday-evening review whose block starts that Sunday must not
@@ -255,9 +255,9 @@ def link_results(db: DbSession, window_days: int = 45) -> int:
             # Prefer the workout the athlete actually SELECTED on the watch: Garmin stamps
             # the activity with the scheduled workout's id (`raw.workoutId`), so a run done
             # a day (or more) late still links to the session it was meant to fulfil — not
-            # to whatever happens to sit on the day he ran it. Falls back to the same-day
+            # to whatever happens to sit on the day they ran it. Falls back to the same-day
             # match for free/unstructured runs that carry no workoutId. (§9: reflect the
-            # plan as done, keyed off his watch selection.)
+            # plan as done, keyed off their watch selection.)
             session = None
             wid = (act.raw or {}).get("workoutId")
             if wid is not None:
@@ -308,7 +308,7 @@ def plan_view(db: DbSession, upcoming_days: int = 30) -> dict:
 
     from ..coach import completion
     from ..coach.schedule import local_today
-    today = local_today(db)  # his local day (PRD §16), not server UTC
+    today = local_today(db)  # their local day (PRD §16), not server UTC
     mp = db.scalar(select(MacroPlan).where(MacroPlan.status == "active").limit(1))
     sessions = db.scalars(
         select(Session).where(

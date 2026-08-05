@@ -1,6 +1,6 @@
 """Notice a planned run that never happened, and ask — once, without assuming.
 
-The twin of `postrun.ask_about_deviations`. That one fires when he ran a session more
+The twin of `postrun.ask_about_deviations`. That one fires when they ran a session more
 than 20% off its prescription; this one fires when nothing came in at all. The gap it
 fills was exact: **run 40% of a session and the coach asks, run 0% of it and the coach
 said nothing.** (2026-08-05: a Monday easy run went undone, the watch synced that
@@ -12,18 +12,18 @@ sessions and has no view of yesterday at all.)
 Every rule below is the coach's own, asked with full doctrine + live prod state:
 
 - **Fires in the NEXT MORNING'S brief**, once the day is closed — not the 22:00 debrief
-  and not on sync. He sometimes runs at 21:00, and a watch that hasn't synced looks
-  identical to a run that didn't happen; asking "did you not run?" half an hour after he
+  and not on sync. They sometimes run at 21:00, and a watch that hasn't synced looks
+  identical to a run that didn't happen; asking "did you not run?" half an hour after they
   ran is the single worst failure mode for this feature, because it proves the system
   isn't watching properly, which is the exact complaint it exists to fix. Sync-time firing
   is worse still: sync events land at arbitrary hours with no relation to the day being
   over. The cost is ~12 hours of lag, and that is fine — a Tuesday-morning question about
   Monday's run is still perfectly timed to be useful.
-- **`[Optional]` runs NEVER trigger it.** The optional 4th run exists so he can decline it
+- **`[Optional]` runs NEVER trigger it.** The optional 4th run exists so they can decline it
   without a conversation; asking converts an explicit permission into a soft obligation
-  and he would stop skipping it freely. A hard exclusion, not a judgement.
-- **Gym/strength NEVER triggers it.** Two upper-body days a week are a habit structure he
-  set, not a stimulus being periodized — he moves them around and nothing he'd prescribe
+  and they would stop skipping it freely. A hard exclusion, not a judgement.
+- **Gym/strength NEVER triggers it.** Two upper-body days a week are a habit structure they
+  set, not a stimulus being periodized — they move them around and nothing they'd prescribe
   changes if one lands on Thursday. Pinging about gym would also dilute the run signal.
   A months-long disappearance is a pattern for the weekly review, not a daily ping.
 - **Raised at most ONCE per session** (`Session.missed_asked_at`), never re-raised. This is
@@ -99,8 +99,8 @@ def _clean(title: str) -> str:
 
 def notice_text(sessions: list[Session], today: date) -> str:
     """The coach's wording. Deterministic — no LLM call, so it can't drift into implying
-    a cause. NB his draft also asserted "your markers are all at or better than baseline";
-    that is dropped deliberately, because it was true the morning he wrote it and this text
+    a cause. NB their draft also asserted "your markers are all at or better than baseline";
+    that is dropped deliberately, because it was true the morning they wrote it and this text
     ships every morning. "Nothing changes off the back of it" is doctrine and always true;
     a marker that HAS moved is the red-flag path's job, reasoning from the marker."""
     if len(sessions) > NAME_LIMIT:

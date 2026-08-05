@@ -1,5 +1,5 @@
 """Monthly JSON state export to Google Drive (PRD §15): the coach's full state
-dumped to the user's own Drive — his data in his hands, independent of Render, and
+dumped to the user's own Drive — their data in their hands, independent of Render, and
 the natural migration path off the host.
 
 Uses the drive.file scope (least privilege — only touches files it creates). Runs

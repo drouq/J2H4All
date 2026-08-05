@@ -49,7 +49,7 @@ def test_a_run_that_happened_is_not_noticed(db):
 
 
 def test_todays_session_is_never_noticed(db):
-    """The day isn't over — he runs at 5-6pm, sometimes 21:00. Asking mid-day is the
+    """The day isn't over — they run at 5-6pm, sometimes 21:00. Asking mid-day is the
     failure mode the whole design avoids."""
     _session(db, _TODAY)
     assert missed.outstanding_runs(db, _TODAY) == []
@@ -74,7 +74,7 @@ def test_the_lookback_stays_inside_the_grace_window(db):
 
 def test_nothing_older_than_the_lookback(db):
     """Beyond a week it isn't rescheduleable, it's archaeology — and this is the guard
-    that stops a first deploy interrogating him about months of history."""
+    that stops a first deploy interrogating them about months of history."""
     _session(db, _TODAY - timedelta(days=missed.LOOKBACK_DAYS + 1))
     assert missed.outstanding_runs(db, _TODAY) == []
 
@@ -82,7 +82,7 @@ def test_nothing_older_than_the_lookback(db):
 # ------------------------------------------------------------------ the hard exclusions
 
 def test_optional_runs_never_trigger(db):
-    """The optional 4th run exists so he can decline it WITHOUT a conversation. Asking
+    """The optional 4th run exists so they can decline it WITHOUT a conversation. Asking
     converts an explicit permission into a soft obligation."""
     _session(db, _TODAY - timedelta(days=1), title="[Optional] Easy Aerobic — 30 min Z2")
     assert missed.outstanding_runs(db, _TODAY) == []
@@ -94,7 +94,7 @@ def test_the_optional_marker_is_matched_case_insensitively(db):
 
 
 def test_gym_sessions_never_trigger(db):
-    """A habit structure he set, not a stimulus being periodized — he moves them around
+    """A habit structure they set, not a stimulus being periodized — they move them around
     and nothing the coach would prescribe changes. Pinging would dilute the run signal."""
     _session(db, _TODAY - timedelta(days=1), type_="strength", title="Gym — Pull (upper)")
     assert missed.outstanding_runs(db, _TODAY) == []
@@ -106,7 +106,7 @@ def test_rest_days_never_trigger(db):
 
 
 def test_a_superseded_session_is_not_noticed(db):
-    """A revised-away session was never his to miss."""
+    """A revised-away session was never their to miss."""
     _session(db, _TODAY - timedelta(days=1), status="superseded")
     assert missed.outstanding_runs(db, _TODAY) == []
 
@@ -157,7 +157,7 @@ def test_the_notice_assumes_no_cause(db):
 
 
 def test_the_notice_makes_no_claim_about_his_markers(db):
-    """The coach's draft asserted markers were at baseline — true the morning he wrote
+    """The coach's draft asserted markers were at baseline — true the morning they wrote
     it, but this text ships EVERY morning and must not assert an unchecked fact."""
     _session(db, _TODAY - timedelta(days=1))
     text, _ = missed.pending_notice(db, _TODAY)

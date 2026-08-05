@@ -17,7 +17,7 @@ from ..util import utcnow as _utcnow
 
 # How long after a check-in prompt a free-text reply is still read as the check-in
 # note. Past this, the flag is stale (e.g. the evening prompt went unanswered and
-# he's messaging the next morning) and the message is a coaching question instead.
+# they're messaging the next morning) and the message is a coaching question instead.
 REPLY_WINDOW = timedelta(minutes=30)
 
 # Interrogatives that mark a message as a question even without a trailing '?'.

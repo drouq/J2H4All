@@ -86,7 +86,7 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
     The monthly arc + peak block cover the FULL stored history (PRD §14 rollups):
     without them the coach only sees the recent-weeks window and misreads a big
     race week (e.g. the UTA Miler build) as an outlier instead of a peak the
-    athlete trained up to — his real, already-absorbed base."""
+    athlete trained up to — their real, already-absorbed base."""
     since = today - timedelta(weeks=weeks)
 
     # Running volume over the FULL history: weekly (keyed by ISO-week Monday, for
@@ -159,7 +159,7 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
         peak_4wk_avg_km = round(peak_4wk_avg_km, 1)
         peak_4wk_ending = _iso_week(peak_4wk_ending)
         # Recent average = last 4 FULL weeks, zero-filled, excluding the
-        # in-progress week — the honest "what is he actually running right now".
+        # in-progress week — the honest "what is they actually running right now".
         full = [v for m, v in zip(mondays, series) if m < this_monday]
         if full:
             tail = full[-4:]
@@ -245,7 +245,7 @@ def context_for_prompt(db: DbSession) -> dict:
     """Phase 2 context, trimmed for the plan prompt."""
     from ..coach.schedule import local_today
     snap = context_snapshot(db)
-    today_iso = local_today(db).isoformat()  # his local day (PRD §16), not server UTC
+    today_iso = local_today(db).isoformat()  # their local day (PRD §16), not server UTC
     return {
         "timezone": snap["timezone"],
         "diet": snap["diet"],

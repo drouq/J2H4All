@@ -30,7 +30,7 @@ RESP_ELEVATED_BRPM = 3   # 3d waking respiration this far above 28d baseline →
 # five cards off one cut-short long run (2026-08-03), two of them already approved
 # and the last a no-op re-draft of an unchanged week. Approving a no-op card
 # rewrites the whole window and re-pushes calendar+watch for nothing, and cards
-# he's expected to read stop being worth reading. Keyed on the reason (not on
+# they're expected to read stop being worth reading. Keyed on the reason (not on
 # whether one is pending), so a genuinely NEW signal still pings immediately.
 DEDUPE_DAYS = 7
 
@@ -86,7 +86,7 @@ def detect_flags(db: DbSession, today: date) -> list[tuple[str, str]]:
                 f"Resting HR elevated: {base['rhr_recent_3d']} vs {base['rhr_baseline_28d']} baseline."
             ))
     # Illness early-warning from the deep recovery signals (mined from stored raw).
-    # Restlessness is deliberately NOT a trigger — his RLS makes it chronically noisy.
+    # Restlessness is deliberately NOT a trigger — their RLS makes it chronically noisy.
     deep = signals.deep_recovery(db, today)
     latest = deep.get("latest") or {}
     std = latest.get("skin_temp_dev_c")
@@ -129,17 +129,17 @@ def detect_flags(db: DbSession, today: date) -> list[tuple[str, str]]:
         # An off-plan session with no stated reason is NOT a red flag — the data can't
         # say why a run ended early, and proposing an easier week off that guess is the
         # 2026-08-01 mistake (logistical cutoff read as fatigue). `postrun` has asked
-        # him; once he answers, `deviation_reason` rides along and the coach reasons
+        # them; once they answer, `deviation_reason` rides along and the coach reasons
         # from the real cause. A flag backed by anything else still fires normally.
         session = db.get(Session, flagged.session_id) if flagged.session_id else None
         off_plan = session is not None and completion.classify(session, flagged, today) == completion.PARTIAL
         if off_plan and not flagged.deviation_reason:
-            logger.info("Flagged result %s is an unexplained off-plan session; awaiting his reason, "
+            logger.info("Flagged result %s is an unexplained off-plan session; awaiting their reason, "
                         "not proposing", flagged.id)
         else:
             note = flagged.note or "anomalous read"
             if flagged.deviation_reason:
-                note += f" — he says: {flagged.deviation_reason}"
+                note += f" — they say: {flagged.deviation_reason}"
             reasons.append((f"flagged_run:{flagged.id}", f"A recent run was flagged: {note}."))
     # Soreness/pain from the latest checkin
     ci = db.scalar(select(Checkin).order_by(Checkin.date.desc()).limit(1))
@@ -169,8 +169,8 @@ def detect(db: DbSession, today: date) -> list[str]:
 def raised_keys(db: DbSession, today: date) -> set[str]:
     """Reason keys a red-flag card has already been raised for in the last
     DEDUPE_DAYS — whatever became of that card. Approved (the plan was already
-    adjusted for it), rejected (he said no), and superseded (a later weekly review
-    re-planned the same window) all mean the same thing here: he has seen it."""
+    adjusted for it), rejected (they said no), and superseded (a later weekly review
+    re-planned the same window) all mean the same thing here: they have seen it."""
     rows = db.scalars(
         select(Proposal).where(
             Proposal.origin == "red_flag",

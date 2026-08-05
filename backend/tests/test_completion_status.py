@@ -5,7 +5,7 @@ PRESCRIPTION (duration and/or distance), never an execution score. And the rule 
 2026-08-01 long run exposed: a session >20% off plan is asked about, not diagnosed.
 
 `missed` vs `abandoned` is the athlete's distinction (2026-08-05) and the tests below are
-written to hold the line: a session he hasn't done YET keeps its type icon and can
+written to hold the line: a session they haven't done YET keeps its type icon and can
 still become ✅ — only one past the grace window is crossed out.
 """
 from datetime import date, timedelta
@@ -64,9 +64,9 @@ def test_more_than_20_percent_short_is_partial(db):
 # --------------------------------------------- the absolute floor (MIN_GAP)
 
 def test_a_big_percentage_on_a_short_session_is_not_off_plan(db):
-    """His easy runs ran 8-25% over plan all through July (50→59, 55→65, 55→69 min)
-    because he runs a loop, not a stopwatch. Percentage alone would have flagged the
-    69-vs-55 as a deviation and asked him why — noise, on the day the feature landed."""
+    """Their easy runs ran 8-25% over plan all through July (50→59, 55→65, 55→69 min)
+    because they run a loop, not a stopwatch. Percentage alone would have flagged the
+    69-vs-55 as a deviation and asked them why — noise, on the day the feature landed."""
     s = _session(db, _TODAY - timedelta(days=1), title="Easy Aerobic — 55 min", duration=55)
     r = _result(db, s, duration=69)                    # +25%, but only 14 minutes
     assert completion.delta(s, r).fraction > completion.TOLERANCE   # still measured...
@@ -112,7 +112,7 @@ def test_the_worst_deviation_across_metrics_wins(db):
 
 
 def test_gym_duration_is_nominal_so_never_partial(db):
-    """His 45-min gym sessions log 64-81 min routinely — the watch timer includes
+    """Their 45-min gym sessions log 64-81 min routinely — the watch timer includes
     rest between sets, so a delta there measures nothing."""
     s = _session(db, _TODAY - timedelta(days=1), type_="strength", title="Gym — Push",
                  duration=45)
@@ -128,7 +128,7 @@ def test_a_session_with_nothing_comparable_is_done(db):
 
 
 def test_todays_unrun_session_is_still_planned(db):
-    """The day hasn't closed — he runs at 5-6pm and sometimes 21:00."""
+    """The day hasn't closed — they run at 5-6pm and sometimes 21:00."""
     assert completion.classify(_session(db, _TODAY), None, _TODAY) == completion.PLANNED
     assert completion.classify(_session(db, _TODAY + timedelta(days=1)), None, _TODAY) == completion.PLANNED
 
@@ -155,7 +155,7 @@ def test_a_missed_session_carries_no_glyph_so_it_keeps_its_type_icon(db):
 
 
 def test_a_missed_session_can_still_become_done(db):
-    """He shifts a run by a day or two and a late run links by its watch workout id —
+    """They shifts a run by a day or two and a late run links by its watch workout id —
     so `missed` must never be a terminal state."""
     s = _session(db, _TODAY - timedelta(days=2), duration=60)
     assert completion.classify(s, None, _TODAY) == completion.MISSED
@@ -250,7 +250,7 @@ def test_reconcile_marks_done_partial_and_abandoned(db, patched):
 
 def test_a_missed_session_keeps_its_planned_event(db, patched):
     """The rule the athlete asked for: yesterday's unrun session keeps its 🏃 and stays
-    liveable. He logs late, shifts runs by a day, and a late run links by its watch
+    liveable. They logs late, shifts runs by a day, and a late run links by its watch
     workout id — so the grace window has to pass before anything is crossed out."""
     for days in (1, 4, completion.ABANDONED_AFTER_DAYS):
         s = _session(db, _TODAY - timedelta(days=days), title=f"Easy {days}",
@@ -328,7 +328,7 @@ def test_his_reply_is_stored_as_the_reason(db, monkeypatch):
 
 
 def test_the_weekly_review_sees_missed_and_abandoned_as_different_words(db):
-    """The coach-facing half of the split. Conflating these is what let a run he
+    """The coach-facing half of the split. Conflating these is what let a run they
     simply hadn't done yet read the same as one that was gone."""
     recent = _session(db, _TODAY - timedelta(days=1), title="Yesterday's Easy")
     old = _session(db, _TODAY - timedelta(days=completion.ABANDONED_AFTER_DAYS + 1),

@@ -77,7 +77,7 @@ def _run_coach(job: str) -> int:
             fired = schedule.run_tick(db)
             logger.info("tick fired: %s", fired or "nothing due")
         elif job == "morning_brief":
-            adapt.send_morning_brief(db, schedule.local_today(db))  # his local day, not UTC
+            adapt.send_morning_brief(db, schedule.local_today(db))  # their local day, not UTC
         elif job in ("daily_debrief", "daily_checkin", "lifestyle_log"):
             adapt.send_daily_debrief(db)  # old names alias the merged debrief
         elif job == "weekly_review":

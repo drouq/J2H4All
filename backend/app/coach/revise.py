@@ -24,7 +24,7 @@ REVISE_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string", "description": "2-4 sentences describing the revised proposal for a card."},
-        "change_note": {"type": "string", "description": "What changed vs the previous version, per his instruction."},
+        "change_note": {"type": "string", "description": "What changed vs the previous version, per their instruction."},
         "sessions": {
             "type": "array",
             "items": {

@@ -102,13 +102,13 @@ def test_carryover_is_one_to_one_per_date(db):
 
 def test_link_matches_selected_workout_when_run_a_day_late(db):
     """A run done a day late links to the session it fulfilled (by the workout id
-    the athlete selected on the watch), not to whatever sits on the day he ran."""
+    the athlete selected on the watch), not to whatever sits on the day they ran."""
     sat = date.today() - timedelta(days=2)
     sun = sat + timedelta(days=1)
     planned = Session(date=sat, type="long_run", title="Long Run — 2h00 Z2", purpose="",
                       status="planned", garmin_workout_id="1627542620",
                       created_at=_utcnow(), updated_at=_utcnow())
-    # A gym session sits on the day he actually ran — a run must never link to it,
+    # A gym session sits on the day they actually ran — a run must never link to it,
     # and here it also must not steal the completed run from the Saturday long run.
     gym = Session(date=sun, type="strength", title="Gym — Pull", purpose="",
                   status="planned", created_at=_utcnow(), updated_at=_utcnow())

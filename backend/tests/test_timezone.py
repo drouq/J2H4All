@@ -40,7 +40,7 @@ def test_fmt_local_renders_offset(db):
 
 
 def test_local_tz_follows_travel_not_hardcoded(db):
-    """§16: the zone is set by chat and must follow him — never a hardcoded +08."""
+    """§16: the zone is set by chat and must follow them — never a hardcoded +08."""
     _set_tz(db, "Europe/London")
     # 02:00 UTC in July = 03:00 BST.
     assert schedule.to_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc)).hour == 3
@@ -67,7 +67,7 @@ def test_doctrine_defaults_to_his_local_day_not_the_server_day(db):
     """A caller that omits `today` must still get HIS day. The default was
     `date.today()` (UTC on Render) until 2026-08-03 — latent, since every caller
     passes `today`, but one that forgot would render the days-to-race countdown a
-    day short through his whole 00:00-08:00 window. Proven with two zones 26h
+    day short through their whole 00:00-08:00 window. Proven with two zones 26h
     apart: their local dates can never coincide, so a default that ignored
     user_state would hand back the same date for both.
     """

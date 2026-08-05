@@ -10,7 +10,7 @@ trigger still fires) and `LifestyleLog` (flags → recovery attribution) tables.
 Reuses the check-in windowed-await machinery with its own key.
 
 The life factors are ALSO tappable (`lifestyle.TAPS`), not typed-only: six weeks of
-production showed him tapping the feel emoji nightly and typing a line roughly never,
+production showed them tapping the feel emoji nightly and typing a line roughly never,
 so the lifestyle half recorded one row while the check-in half recorded every day
 (found 2026-08-03). Both halves are now answerable with a tap, the card keeps its
 buttons across taps (`render_card`), and a typed line still refines any field.
@@ -39,14 +39,14 @@ PARSE_SCHEMA = {
         "soreness": {"type": ["integer", "null"], "description": "1 none .. 5 very sore, or null"},
         "motivation": {"type": ["integer", "null"], "description": "1 .. 5, or null"},
         "life_stress": {"type": ["integer", "null"], "description": "1 calm .. 5 high, or null"},
-        "note": {"type": ["string", "null"], "description": "Anything notable about how he/his body feels, in his words, else null"},
-        "alcohol": {"type": ["string", "null"], "description": "Alcohol in his words ('2 beers'), else null"},
+        "note": {"type": ["string", "null"], "description": "Anything notable about how they/their body feels, in their words, else null"},
+        "alcohol": {"type": ["string", "null"], "description": "Alcohol in their words ('2 beers'), else null"},
         "illness": {"type": ["string", "null"], "description": "Feeling ill/run-down or symptoms, else null"},
         "sleep": {"type": ["string", "null"], "description": "Sleep disruptors — late night, restless legs, travel — else null"},
         "nutrition": {"type": ["string", "null"], "description": "Notable nutrition/diet/hydration, else null"},
         "training_extra": {"type": ["string", "null"], "description": "Extra non-run work (home legs) or fueling practiced, else null"},
         "stress": {"type": ["string", "null"], "description": "Work/life stress events, else null"},
-        "summary": {"type": "string", "description": "One short line recapping the day in his words"},
+        "summary": {"type": "string", "description": "One short line recapping the day in their words"},
     },
     "required": ["energy", "soreness", "motivation", "life_stress", "note",
                  "alcohol", "illness", "sleep", "nutrition", "training_extra", "stress", "summary"],
@@ -110,7 +110,7 @@ def record_reply(db: DbSession, text: str, today: date | None = None) -> None:
             system=("Extract an end-of-day debrief from the athlete's message: subjective feel "
                     "scores (1-5) AND the life factors a watch can't see (alcohol, illness, sleep "
                     "disruptors, nutrition, extra workouts, stress). Only fill fields the message "
-                    "supports; use null otherwise. Keep his own words."),
+                    "supports; use null otherwise. Keep their own words."),
             content=text,
             tool_name="record_debrief", tool_schema=PARSE_SCHEMA,
             tool_description="Extract the debrief fields.",

@@ -136,13 +136,53 @@ class SyncRun(Base):
 
 # ---------------------------------------------------------------- Phase 2: context (PRD §6.2)
 
+class AthleteProfile(Base):
+    """WHO the athlete is. Single row, id pinned to 1 (same shape as UserState).
+
+    This table exists so that no fact about a particular person is ever hardcoded
+    into a prompt again. `coach/doctrine.py` renders from here; if you find
+    yourself about to write someone's name, age or physiology into prompt text,
+    it belongs in this table (structured) or in a coaching Note (free text).
+
+    Every field is nullable or defaulted: a fresh install has no profile, and the
+    coach must still work — more carefully, saying what it doesn't know — until
+    the athlete fills one in.
+    """
+
+    __tablename__ = "athlete_profile"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # always 1
+    # What the coach calls them. None -> it addresses them directly instead.
+    name: Mapped[str | None] = mapped_column(String(64))
+    # Free-form rather than an enum: "she/her", "he/him", "they/them", or whatever
+    # the athlete tells us. Defaults to they/them — correct for an unknown person,
+    # rather than a guess about one.
+    pronouns: Mapped[str] = mapped_column(String(32), nullable=False,
+                                          server_default=text("'they/them'"))
+    birthdate: Mapped[date | None] = mapped_column(Date)
+    # Preferred coaching language as an IETF tag ("en", "fr"). None = mirror
+    # whatever language they wrote in, which is the existing default behaviour.
+    language: Mapped[str | None] = mapped_column(String(16))
+    # Free text: anything that changes HOW THEIR DATA SHOULD BE READ, as opposed to
+    # how they should be trained. Restless legs or a newborn wrecking sleep scores
+    # while recovery is genuinely fine; a medication that caps heart rate. The
+    # coach is told to weigh these above the raw metric.
+    data_caveats: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class DietaryProfile(Base):
-    """Vegetarian is fixed; `notes` is free-text the coach references for fueling (PRD §6.2)."""
+    """Diet pattern + free-text notes the coach references for fueling.
+
+    `diet` is a free-text label the athlete gives ("omnivore", "vegetarian",
+    "vegan", "coeliac") rather than an enum — it feeds a prompt, not a branch. It
+    used to default to one athlete's diet; it now defaults to 'unspecified' so the
+    coach knows it hasn't been told, instead of assuming."""
 
     __tablename__ = "dietary_profile"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    diet: Mapped[str] = mapped_column(String(64), nullable=False, server_default=text("'vegetarian'"))
+    diet: Mapped[str] = mapped_column(String(64), nullable=False, server_default=text("'unspecified'"))
     notes: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -337,7 +377,7 @@ class SessionResult(Base):
     read_summary: Mapped[str | None] = mapped_column(Text)  # Phase 5: coach's planned-vs-actual read
     flagged: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))  # acute concern
     # A session >20% off its planned duration/distance is a QUESTION, not a diagnosis:
-    # the coach asks what happened (stamping `deviation_asked_at`, once) and stores his
+    # the coach asks what happened (stamping `deviation_asked_at`, once) and stores their
     # answer here rather than inferring a physical cause. See coach/completion.py.
     deviation_asked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deviation_reason: Mapped[str | None] = mapped_column(Text)
@@ -384,7 +424,7 @@ class LifestyleLog(Base):
     sleep disruptors (RLS/late night/stress), nutrition, extra workouts, travel.
     Prompted at 22:00 local over Telegram; feeds the coach's recovery/load read so a
     poor overnight reading can be attributed (a beer + late night, not fitness). One
-    row/day. `raw_text` is his words; `data` is the LLM-parsed structured fields."""
+    row/day. `raw_text` is their words; `data` is the LLM-parsed structured fields."""
 
     __tablename__ = "lifestyle_log"
 

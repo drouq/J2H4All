@@ -85,7 +85,7 @@ def status(user: str = Depends(current_user), db: Session = Depends(get_db)):
         "connected": connected,
         "calendar_id": state.training_calendar_id,
         "has_unsynced_sessions": unsynced is not None,
-        # Last successful push, rendered on his local clock (PRD §16), for each target.
+        # Last successful push, rendered on their local clock (PRD §16), for each target.
         "last_calendar_push": _local_stamp(db, "last_push_calendar_at"),
         "last_garmin_push": _local_stamp(db, "last_push_garmin_at"),
     }

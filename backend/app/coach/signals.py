@@ -159,8 +159,8 @@ def recent_checkins(db: DbSession, today: date, days: int = 10) -> list[dict]:
 def recent_lifestyle(db: DbSession, today: date, days: int = 10) -> list[dict]:
     """End-of-day lifestyle logs (alcohol/illness/sleep/stress/nutrition) — the life
     factors Garmin can't see, for attributing a poor overnight reading. Only the
-    fields he actually flagged are surfaced; a 'nothing to report' day carries no
-    flags but still shows he was clear."""
+    fields they actually flagged are surfaced; a 'nothing to report' day carries no
+    flags but still shows they were clear."""
     from ..models import LifestyleLog
     since = today - timedelta(days=days)
     rows = db.scalars(
@@ -232,14 +232,14 @@ def recent_plan_execution(db: DbSession, today: date, days: int = 14) -> list[di
         r = result_by_session.get(s.id)
         if r is not None:
             # `completed_off_plan` is a distinct outcome: it happened, but not as
-            # prescribed. The cause is only ever what he said (`deviation_reason`).
+            # prescribed. The cause is only ever what they said (`deviation_reason`).
             status = "completed_off_plan" if classify(s, r, today) == PARTIAL else "completed"
         elif s.type in ("rest", "strength"):
             status = "no_data"  # rest days and gym sessions aren't Garmin-tracked
         elif "[optional]" in (s.title or "").lower():
             status = "skipped_optional"
         else:
-            # `missed` (the day closed, still liveable — he shifts runs by a day or two)
+            # `missed` (the day closed, still liveable — they shift runs by a day or two)
             # vs `abandoned` (past the grace window, gone). Two different coaching
             # situations, so the coach gets two different words; see completion.py.
             # The query already restricts to `date < today`, so this is never PLANNED.
@@ -256,7 +256,7 @@ def recent_plan_execution(db: DbSession, today: date, days: int = 14) -> list[di
             }
             if status == "completed_off_plan":
                 entry["deviation"] = delta_line(s, r)
-                entry["deviation_reason"] = r.deviation_reason  # his words, or null = not asked/answered
+                entry["deviation_reason"] = r.deviation_reason  # their words, or null = not asked/answered
         out.append(entry)
     return out
 
@@ -348,9 +348,9 @@ def data_freshness(db: DbSession, today: date) -> dict:
 def deep_recovery(db: DbSession, today: date) -> dict:
     """Illness early-warning + sleep-quality context mined from the wellness raw
     payloads we already store (zero extra Garmin calls): waking respiration,
-    skin-temperature deviation (Garmin computes it vs his personal baseline —
+    skin-temperature deviation (Garmin computes it vs their personal baseline —
     a rise is a classic pre-symptom fever signal), sleep restlessness (context
-    for the RLS sleep-score rule — his restlessness is chronically high, so
+    for the RLS sleep-score rule — their restlessness is chronically high, so
     judge vs HIS baseline), and body battery at wake."""
     rows = db.scalars(
         select(WellnessDaily).where(

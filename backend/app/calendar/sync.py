@@ -157,14 +157,14 @@ def reconcile(db: DbSession, window_start: date | None = None) -> dict:
     # 2) Mark what actually happened: ✅ done as planned, ⚠️ done but >20% off, ❌
     #    ABANDONED — still not done after the grace window (coach/completion.py).
     #    A merely MISSED session (the day closed with nothing against it) is skipped
-    #    alongside PLANNED: it keeps its type icon deliberately, because he shifts runs
+    #    alongside PLANNED: it keeps its type icon deliberately, because they shift runs
     #    by a day or two and a late run still links via its watch workout id, so it can
     #    still become ✅. Only abandonment earns the cross.
     #    Includes TODAY (<= start): a session completed this morning would
     #    otherwise be rewritten as planned by the desired-loop above and only
     #    get its mark at the next reconcile, possibly a week later. Running after
     #    the desired loop, this body wins for the same-day case. A past session
-    #    still inside the grace window stays `planned` and is left untouched — he
+    #    still inside the grace window stays `planned` and is left untouched — they
     #    logs late sometimes, and a run done on the day links via its watch workout.
     rows = db.execute(
         select(Session, SessionResult)

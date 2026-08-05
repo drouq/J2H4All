@@ -86,7 +86,7 @@ def check_stale(db: DbSession) -> bool:
         return False
     last = _last_success_at(db)
     from .coach.schedule import fmt_local
-    when = fmt_local(db, last) if last else "?"  # his local clock, never raw server UTC
+    when = fmt_local(db, last) if last else "?"  # their local clock, never raw server UTC
     _send(
         f"⚠️ No successful Garmin sync since {when} ({hrs:.0f}h ago). Recovery/activity data is "
         f"stale — I'll keep working off stored numbers and flag anything that leans on them. If this "

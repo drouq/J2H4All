@@ -10,8 +10,8 @@ Five states, deterministic (PRD §9 layer 3):
   abandoned  ❌         still not done after ABANDONED_AFTER_DAYS
 
 **`missed` and `abandoned` are deliberately different things** (the athlete's distinction,
-2026-08-05). A session he hasn't done *yet* is not the same event as one that is gone:
-he logs late, he shifts a run by a day or two, and a run done later still links to its
+2026-08-05). A session they haven't done *yet* is not the same event as one that is gone:
+they log late, they shift a run by a day or two, and a run done later still links to its
 session via the watch workout id. So a missed session keeps its 🏃 and can still become
 ✅ — only an abandoned one is crossed out. This replaced a single `missed` state that
 meant "not done after 10 days", which forced the calendar to show a run as merely
@@ -25,7 +25,7 @@ prompt to ask about. On 2026-08-01 a 3h long run came in at 2h01 for logistical
 reasons; the coach read the shortfall as physical, flagged it, and proposed an
 easier week off that assumption — the wrong week for the wrong reason. The status
 is measured off the PRESCRIPTION (duration and/or distance), never off an execution
-or quality score: the question is "did the session happen as planned", and only he
+or quality score: the question is "did the session happen as planned", and only they
 knows why not.
 """
 
@@ -38,20 +38,20 @@ from ..models import Session, SessionResult
 TOLERANCE = 0.20
 
 # ...but a percentage alone is too jumpy on a short session, because the denominator
-# is small. Measured against his real July block: easy runs land 8-25% over plan as a
-# matter of course (50→59, 55→65, 55→69 min) because he runs a loop or a round
+# is small. Measured against their real July block: easy runs land 8-25% over plan as a
+# matter of course (50→59, 55→65, 55→69 min) because they run a loop or a round
 # distance, not a stopwatch — while the one deviation that actually meant something
 # was 180→121 min. Ten minutes over on an easy run is not a training event; an hour
 # off a long run is. So a session must ALSO miss by this much in absolute terms
 # before it counts as off-plan. This only ever makes the check stricter.
 MIN_GAP = {"duration": 15.0, "distance": 2.0}  # minutes / km
-# A missed session is only ABANDONED (❌) once it's this old — he sometimes logs late,
+# A missed session is only ABANDONED (❌) once it's this old — they sometimes log late,
 # and a run done on the day still links via the watch workout id. Before that it keeps
 # its type icon and can still turn into a ✅.
 ABANDONED_AFTER_DAYS = 10
 
 # Session types whose planned duration is nominal rather than prescribed, so a
-# delta means nothing: gym time includes rest between sets and warm-up faff (his
+# delta means nothing: gym time includes rest between sets and warm-up faff (their
 # 45-min gym sessions log 64-81 min routinely), and rest isn't measured at all.
 # Everything else — every run type, present or future — gets the check.
 NO_DELTA_TYPES = frozenset({"strength", "rest"})
@@ -102,7 +102,7 @@ def off_plan(session: Session, result: SessionResult | None) -> bool:
 def classify(session: Session, result: SessionResult | None, today: date) -> str:
     """One of PLANNED / DONE / PARTIAL / MISSED / ABANDONED.
 
-    Note the day-boundary: TODAY's unrun session is still PLANNED, not missed — he
+    Note the day-boundary: TODAY's unrun session is still PLANNED, not missed — they
     runs at 5-6pm and sometimes 21:00, so the day has to close first (the same rule
     `coach/missed.py` fires on)."""
     if result is not None and result.completed:

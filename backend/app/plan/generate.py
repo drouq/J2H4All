@@ -26,7 +26,7 @@ MACRO_TOOL_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
-        "rationale": {"type": "string", "description": "Why this periodization, in 3-5 sentences, grounded in his current fitness and recovery."},
+        "rationale": {"type": "string", "description": "Why this periodization, in 3-5 sentences, grounded in their current fitness and recovery."},
         "b_race_approach": {"type": "string", "description": "How the B-race (if any) is handled: mini-taper (3-5 day sharpen, not a full taper) then a deliberate rebound before the final backyard-specific block."},
         "phases": {
             "type": "array",
@@ -83,7 +83,7 @@ def _system_base(db, today: date) -> str:
     return (
         "You are the head coach in J2H4All, a personal running-coach system.\n\n"
         + doctrine.full_doctrine(db, today)
-        + "\n\nRespect his stated availability windows (treadmill periods), injuries, and preferences."
+        + "\n\nRespect their stated availability windows (treadmill periods), injuries, and preferences."
     )
 
 
@@ -118,8 +118,8 @@ def generate_macro_plan(db, today: date) -> dict:
         _system_base(db, today)
         + "\n\nBuild a periodized MACRO PLAN from now to race day: dated phases (base -> build -> "
         "backyard-specific -> taper) with weekly volume ranges and intensity focus, with the B-race's "
-        "mini-taper and rebound slotted in. Ground the ramp in his current weekly volume and acute:chronic "
-        "load — do not prescribe a jump his recent training doesn't support. Phases must be contiguous and end on race day."
+        "mini-taper and rebound slotted in. Ground the ramp in their current weekly volume and acute:chronic "
+        "load — do not prescribe a jump their recent training doesn't support. Phases must be contiguous and end on race day."
     )
     return _call_guarded("Macro-plan generation", "phases", lambda: call_tool(
         task="macro_plan",
@@ -140,8 +140,8 @@ def generate_sessions(db, today: date, macro: dict, days: int = SESSION_WINDOW_D
         "current phase. Every session carries a 'purpose' (the why). Include easy/recovery days and rest days. "
         "Add fueling notes where relevant (long runs, backyard-specific work). Respect treadmill windows and injuries. "
         "The athlete's `context.preferences` are standing AGREEMENTS, not hints: before recording, count the "
-        "run-days in each week (a short Z1 recovery jog IS a run) against his run-frequency cap, mark any "
-        "optional run with '[Optional]' in its title, and structure strength days around his stated gym habits."
+        "run-days in each week (a short Z1 recovery jog IS a run) against their run-frequency cap, mark any "
+        "optional run with '[Optional]' in its title, and structure strength days around their stated gym habits."
     )
     content = (
         "Athlete state and the approved macro plan as JSON. Generate the next "
