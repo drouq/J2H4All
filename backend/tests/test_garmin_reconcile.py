@@ -8,7 +8,8 @@ from datetime import date, timedelta
 import pytest
 
 from app.garmin import workouts
-from app.models import Session as PlanSession, SessionResult
+from app.models import Session as PlanSession
+from app.models import SessionResult
 from app.util import utcnow
 
 

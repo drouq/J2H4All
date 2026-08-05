@@ -1,5 +1,5 @@
 """Structured-session steps: the coach can prescribe interval structure that is
-pushed to the watch as a Garmin structured workout (docs/garmin-workout-push-plan.md).
+pushed to the watch as a Garmin structured workout (docs/garmin-workout-push.md).
 
 One shared JSON-schema fragment (`STRUCTURE_SCHEMA`) used by every LLM tool schema
 that emits sessions, so all four generators (onboarding, weekly review, edit-redraft,

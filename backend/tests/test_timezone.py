@@ -5,7 +5,7 @@ cron's pull timestamp, quoted as a raw UTC hour (8h off in Singapore) AND mislab
 as a watch upload. These cover the rendering half; the mislabel is fixed by naming
 (`last_backend_pull_local`) + prompt guidance.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.coach import doctrine, schedule
 from app.context.store import get_or_create_state
@@ -20,7 +20,7 @@ def _set_tz(db, tz: str):
 def test_to_local_converts_utc_to_singapore(db):
     _set_tz(db, "Asia/Singapore")
     # The exact bug: 02:00 UTC is 10:00 in Singapore, not 2am.
-    utc_2am = datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc)
+    utc_2am = datetime(2026, 7, 16, 2, 0, tzinfo=UTC)
     assert schedule.to_local(db, utc_2am).hour == 10
 
 
@@ -33,7 +33,7 @@ def test_to_local_assumes_utc_for_naive_input(db):
 
 def test_fmt_local_renders_offset(db):
     _set_tz(db, "Asia/Singapore")
-    out = schedule.fmt_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc))
+    out = schedule.fmt_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=UTC))
     assert "09:58" not in out          # sanity: not a stray fixed string
     assert out.startswith("2026-07-16 10:00")
     assert "+08" in out
@@ -43,12 +43,12 @@ def test_local_tz_follows_travel_not_hardcoded(db):
     """The zone is set by chat and must follow them — never a hardcoded offset."""
     _set_tz(db, "Europe/London")
     # 02:00 UTC in July = 03:00 BST.
-    assert schedule.to_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc)).hour == 3
+    assert schedule.to_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=UTC)).hour == 3
 
 
 def test_unknown_timezone_falls_back_to_utc(db):
     _set_tz(db, "Not/AZone")
-    assert schedule.to_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc)).hour == 2
+    assert schedule.to_local(db, datetime(2026, 7, 16, 2, 0, tzinfo=UTC)).hour == 2
 
 
 def test_doctrine_states_the_configured_zone(db):
@@ -123,7 +123,7 @@ def test_data_freshness_reports_the_pull_in_local_time(db):
     _set_tz(db, "Asia/Singapore")
     today = _date(2026, 7, 16)
     db.add(WellnessDaily(date=today, raw={}, resting_hr=47,
-                         synced_at=datetime(2026, 7, 16, 2, 0, tzinfo=timezone.utc)))
+                         synced_at=datetime(2026, 7, 16, 2, 0, tzinfo=UTC)))
     db.commit()
 
     out = signals.data_freshness(db, today)

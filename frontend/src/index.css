@@ -544,3 +544,27 @@ section {
 .setup-steps li { padding: 0.35rem 0; border-bottom: 1px solid var(--line, #2a2a2a); font-size: 0.95rem; }
 .setup-steps li:last-child { border-bottom: none; }
 .setup-steps .small { margin-top: 0.15rem; }
+
+/* --- guided setup wizard --- */
+.wizard-bar { height: 4px; background: var(--line, #2a2a2a); border-radius: 2px; margin: 0.5rem 0 1rem; overflow: hidden; }
+.wizard-bar span { display: block; height: 100%; background: var(--ok, #3fb950); transition: width 0.3s ease; }
+.wizard { list-style: none; padding: 0; margin: 0; counter-reset: none; }
+.wizard-step { border-bottom: 1px solid var(--line, #2a2a2a); }
+.wizard-step:last-child { border-bottom: none; }
+.wizard-head {
+  display: flex; align-items: baseline; gap: 0.5rem; width: 100%;
+  background: none; border: none; padding: 0.5rem 0; text-align: left;
+  color: inherit; font: inherit; cursor: pointer;
+}
+.wizard-head:hover strong { text-decoration: underline; }
+.wizard-mark { flex: none; width: 1em; }
+.wizard-n { flex: none; opacity: 0.45; font-variant-numeric: tabular-nums; min-width: 1.2em; }
+.wizard-step.current > .wizard-head strong { color: var(--fg, #e6edf3); }
+.wizard-step.current { background: rgba(127, 127, 127, 0.06); }
+.wizard-body { padding: 0.25rem 0 0.9rem 2.7rem; }
+.wizard-body label { display: block; margin: 0.4rem 0; }
+.paircode { font-size: 1.4em; letter-spacing: 0.15em; }
+@media (max-width: 480px) {
+  .wizard-head { flex-wrap: wrap; }
+  .wizard-body { padding-left: 0.5rem; }
+}

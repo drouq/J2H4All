@@ -10,8 +10,6 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..util import utcnow as _utcnow
-
 from ..models import (
     AthleteProfile,
     AvailabilityWindow,
@@ -22,6 +20,7 @@ from ..models import (
     Preference,
     UserState,
 )
+from ..util import utcnow as _utcnow
 
 
 def _parse_date(s: str | None, default: date | None = None) -> date | None:

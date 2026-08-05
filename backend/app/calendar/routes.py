@@ -94,8 +94,8 @@ def status(user: str = Depends(current_user), db: Session = Depends(get_db)):
 def _local_stamp(db: Session, key: str) -> str | None:
     from datetime import datetime
 
-    from ..context.store import get_meta
     from ..coach.schedule import fmt_local
+    from ..context.store import get_meta
     raw = get_meta(db, key)
     if not raw:
         return None

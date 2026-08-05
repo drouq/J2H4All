@@ -9,7 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from .models import Activity, BloodMarker, FitnessMarker, Session, WellnessDaily
-from .util import RUN_TYPES, as_dt as _as_dt
+from .util import RUN_TYPES
+from .util import as_dt as _as_dt
 
 
 def _iso_week_start(d: date) -> date:

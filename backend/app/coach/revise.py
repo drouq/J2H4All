@@ -5,6 +5,7 @@ restart between the tap and the reply."""
 
 import json
 import logging
+from datetime import UTC
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -60,7 +61,6 @@ def pop_pending_edit(db: DbSession) -> int | None:
     no edit is pending OR the Edit tap is stale (older than REPLY_WINDOW) — a forgotten
     Edit tap must NOT hijack an unrelated free-text message (a debrief, a question) hours
     later, the same windowing the check-in/debrief awaiting flags use."""
-    from datetime import timezone
 
     from .checkin import REPLY_WINDOW
     pref = db.scalar(select(Preference).where(Preference.key == _PENDING_KEY))
@@ -69,7 +69,7 @@ def pop_pending_edit(db: DbSession) -> int | None:
     pid = int(pref.value)
     stamped = pref.updated_at
     if stamped.tzinfo is None:  # SQLite hands back naive; treat as UTC
-        stamped = stamped.replace(tzinfo=timezone.utc)
+        stamped = stamped.replace(tzinfo=UTC)
     db.delete(pref)
     db.commit()
     if _utcnow() - stamped > REPLY_WINDOW:

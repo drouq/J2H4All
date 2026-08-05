@@ -1,4 +1,4 @@
-"""Garmin workout push (docs/garmin-workout-push-plan.md).
+"""Garmin workout push (docs/garmin-workout-push.md).
 
 Every approved planned run session becomes a Garmin structured workout scheduled
 on its date, so the watch proposes it with pace/HR-zone targets. Mirrors the

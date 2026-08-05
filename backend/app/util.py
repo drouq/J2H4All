@@ -3,7 +3,7 @@ drifted into per-module copies (RUN_TYPES existed in 4 files, _as_dt in 5,
 _utcnow in 10). Modules alias these (`from .util import utcnow as _utcnow`)
 so call sites stay unchanged."""
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 # Garmin activity_type prefixes that count as running — used to filter
 # activities in rollups, trends, and planned-vs-actual result linking.
@@ -12,12 +12,12 @@ RUN_TYPES = ("running", "trail_running", "treadmill_running", "track_running", "
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def as_dt(d: date) -> datetime:
     """Midnight UTC for a date — for comparing a date against timestamptz columns."""
-    return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    return datetime(d.year, d.month, d.day, tzinfo=UTC)
 
 
 def as_utc(dt: datetime | None) -> datetime | None:
@@ -31,4 +31,4 @@ def as_utc(dt: datetime | None) -> datetime | None:
     this; that's the drift this module exists to stop.)"""
     if dt is None:
         return None
-    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+    return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt

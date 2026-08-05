@@ -13,9 +13,9 @@ import json
 import logging
 import os
 
+import garth.sso as _sso
 from curl_cffi import requests as _creq
 
-import garth.sso as _sso
 from .impersonate import IMPERSONATE
 
 logging.basicConfig(level=logging.INFO)

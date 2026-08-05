@@ -15,8 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from ..models import BloodMarker, Message
-from ..util import utcnow as _utcnow
 from ..plan.store import plan_view
+from ..util import utcnow as _utcnow
 from . import doctrine, signals
 
 logger = logging.getLogger(__name__)

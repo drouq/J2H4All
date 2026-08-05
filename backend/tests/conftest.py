@@ -6,18 +6,18 @@ Postgres JSONB variant falls back to plain JSON on SQLite, which is enough.
 """
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 # backend/ on the path so `import app...` works when pytest runs from anywhere.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.models import Base  # noqa: E402
 from app.config import Settings, get_settings  # noqa: E402
+from app.models import Base  # noqa: E402
 
 # Tests must be isolated from whatever is in the developer's backend/.env.
 # Without this, following SETUP.md (which tells you to create that file) turns the
@@ -57,4 +57,4 @@ def db():
 
 @pytest.fixture
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

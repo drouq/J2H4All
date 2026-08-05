@@ -1,7 +1,7 @@
 """apply_sessions: today-or-later clamp, drop-today-when-done, and the per-date
 1:1 stable-id carry-over. These guard the paths that corrupt the live plan.
 Plus link_results: match a completed run to the session it fulfilled."""
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from app.models import Activity, Session, SessionResult
 from app.plan import store
@@ -13,7 +13,7 @@ def _sess(d, type="easy", **kw):
 
 
 def _run(act_id, d, *, workout_id=None, dur_min=120.0, dist_km=19.0):
-    start = datetime(d.year, d.month, d.day, 18, 0, tzinfo=timezone.utc)
+    start = datetime(d.year, d.month, d.day, 18, 0, tzinfo=UTC)
     return Activity(
         id=act_id, start_time_utc=start, start_time_local=start.replace(tzinfo=None),
         activity_type="running", name="run", duration_s=dur_min * 60, distance_m=dist_km * 1000,
@@ -23,7 +23,7 @@ def _run(act_id, d, *, workout_id=None, dur_min=120.0, dist_km=19.0):
 
 
 def _strength(act_id, d, *, atype="strength_training", dur_min=65.0):
-    start = datetime(d.year, d.month, d.day, 18, 0, tzinfo=timezone.utc)
+    start = datetime(d.year, d.month, d.day, 18, 0, tzinfo=UTC)
     return Activity(
         id=act_id, start_time_utc=start, start_time_local=start.replace(tzinfo=None),
         activity_type=atype, name="Strength", duration_s=dur_min * 60, distance_m=None,

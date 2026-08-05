@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import garth
 
@@ -83,6 +83,7 @@ class GarminClient:
             return None
         try:
             from sqlalchemy import select
+
             from ..models import Preference
             pref = db.scalar(select(Preference).where(Preference.key == cls._BOOTSTRAP_KEY))
             return pref.value if pref else None
@@ -127,7 +128,7 @@ class GarminClient:
             )
             return
         val = json.dumps(oauth2.to_dict(tok))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if pref:
             pref.value, pref.updated_at = val, now
         else:

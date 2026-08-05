@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session as DbSession
 from ..models import LifestyleLog
 from ..util import utcnow as _utcnow
 
-
 # One-tap life flags for the debrief card. Garmin's native Lifestyle Logging is
 # blocked (mobile-only, undocumented), and the typed fallback captured exactly ONE
 # row in six weeks (found 2026-08-03): they answer the debrief with the feel emoji

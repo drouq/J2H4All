@@ -16,7 +16,6 @@ from app.context import store as ctx_store
 from app.models import Goal
 from app.plan import store as plan_store
 
-
 # ------------------------------------------------------------------ setting a goal
 
 def test_a_fresh_install_is_a_placeholder(db):
@@ -118,6 +117,7 @@ def client(db):
     """The API with this test's database and a signed-in athlete. Overrides are
     cleared afterwards so one test can't leak its session into the next."""
     from fastapi.testclient import TestClient
+
     from app import main
     from app.auth import current_user
     from app.db import get_db

@@ -14,7 +14,8 @@ from datetime import date, timedelta
 import pytest
 
 from app.coach import brief, missed
-from app.models import Session as PlanSession, SessionResult
+from app.models import Session as PlanSession
+from app.models import SessionResult
 from app.util import utcnow
 
 _TODAY = date(2026, 8, 5)          # a Wednesday

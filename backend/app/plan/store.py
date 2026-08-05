@@ -8,7 +8,6 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DbSession
 
-from ..util import RUN_TYPES, as_dt as _as_dt, utcnow as _utcnow
 from ..models import (
     Activity,
     Goal,
@@ -17,6 +16,9 @@ from ..models import (
     Session,
     SessionResult,
 )
+from ..util import RUN_TYPES
+from ..util import as_dt as _as_dt
+from ..util import utcnow as _utcnow
 
 logger = logging.getLogger(__name__)
 # Session types a run activity may be linked against (planned-vs-actual): a run
@@ -195,8 +197,8 @@ def apply_sessions(db: DbSession, sessions: list[dict], macro_plan_id: int | Non
     materialize the approved set, superseding overlapping planned sessions."""
     if not sessions:
         return 0
-    from ..garmin.workouts import PUSH_TYPES
     from ..coach.schedule import local_today
+    from ..garmin.workouts import PUSH_TYPES
 
     today = local_today(db)  # their local day — a UTC 'today' would, in their
     # 00:00-08:00 window, drop/keep the wrong day and orphan a completed session's result.

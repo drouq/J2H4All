@@ -273,6 +273,9 @@ otherwise every session runs long by design, and invisible extra volume never tr
 off-plan check. This lives in the payload builder rather than in a prompt, deliberately: a
 rule that must hold on every single session shouldn't depend on a model remembering it.
 
+> Full reference — API surface, session→workout mapping, lifecycle rules and accepted
+> risks: [docs/garmin-workout-push.md](docs/garmin-workout-push.md).
+
 ### Watch delivery only happens on a scheduling event
 
 Only *scheduling* events trigger delivery to the watch, so the workout reconcile refreshes

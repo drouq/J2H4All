@@ -2,6 +2,7 @@ import asyncio
 import html as _html
 import logging
 import re
+from datetime import UTC
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -206,8 +207,8 @@ def _default_chat() -> str | None:
     env = get_settings().telegram_chat_id
     if env:
         return str(env)
-    from .db import SessionLocal
     from . import telegram_link
+    from .db import SessionLocal
 
     db = SessionLocal()
     try:
@@ -259,8 +260,8 @@ def _gate(chat_id: str) -> bool:
 
 def _try_pairing(chat_id: str, text: str) -> bool:
     """Sync helper (opens its own session) so the async handler can offload it."""
-    from .db import SessionLocal
     from . import telegram_link
+    from .db import SessionLocal
 
     db = SessionLocal()
     try:
@@ -338,9 +339,9 @@ def _push_plan() -> None:
     """Re-sync the current APPROVED plan to Google Calendar + Garmin (the Telegram
     twin of the web 'Push plan' button). This pushes what's already in the store —
     it does not change the plan, so no approval gate applies."""
-    from .db import SessionLocal
     from .calendar.sync import safe_reconcile
     from .coach.proposal_actions import _calendar_line, _garmin_line
+    from .db import SessionLocal
     db = SessionLocal()
     try:
         cal = safe_reconcile(db)
@@ -377,9 +378,9 @@ def send_typing(chat_id: str | None = None) -> None:
 
 
 def _send_debrief_prompt() -> None:
-    from .db import SessionLocal
     from .coach import debrief
     from .coach.checkin import set_awaiting
+    from .db import SessionLocal
     db = SessionLocal()
     try:
         text, keyboard = debrief.prompt_card(db)
@@ -390,8 +391,8 @@ def _send_debrief_prompt() -> None:
 
 
 def _send_brief() -> None:
-    from .db import SessionLocal
     from .coach.brief import send_brief
+    from .db import SessionLocal
     db = SessionLocal()
     try:
         if send_brief(db) is None:
@@ -410,9 +411,9 @@ def _handle_free_text(text: str) -> None:
          so a later note still lands)
       4. otherwise                             -> a coaching question
     """
-    from .db import SessionLocal
     from .coach import chat, debrief, postrun, revise
     from .coach.checkin import awaiting_active, clear_awaiting, looks_like_question
+    from .db import SessionLocal
     from .llm import LLMNotConfigured
     from .models import Proposal
     db = SessionLocal()
@@ -491,7 +492,7 @@ def _offer_context_capture(db, text: str) -> None:
     written until the user taps Save — the confirm step, as inline buttons.
     Best-effort: never disturb the coaching answer that was already sent."""
     import json as _json
-    from datetime import datetime, timezone as _tz
+    from datetime import datetime
 
     from sqlalchemy import select
 
@@ -509,7 +510,7 @@ def _offer_context_capture(db, text: str) -> None:
     if not items:
         return
     try:
-        now = datetime.now(_tz.utc)
+        now = datetime.now(UTC)
         pref = db.scalar(select(Preference).where(Preference.key == _PENDING_CTX_KEY))
         if pref is None:
             db.add(Preference(key=_PENDING_CTX_KEY, value=_json.dumps(items), updated_at=now))
@@ -568,7 +569,7 @@ def _handle_callback(cb: dict) -> None:
         action, _, arg = data.partition(":")
         if action in ("ci", "lf"):  # feel / life-flag taps on the debrief card
             from .coach import debrief, lifestyle
-            from .coach.checkin import record_quick, set_awaiting, QUICK
+            from .coach.checkin import QUICK, record_quick, set_awaiting
             from .coach.schedule import local_today
             if action == "ci":
                 record_quick(db, arg)

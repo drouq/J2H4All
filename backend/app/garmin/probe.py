@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> int:
-    from .client import GarminClient, GarminAuthError
+    from .client import GarminAuthError, GarminClient
 
     try:
         client = GarminClient()

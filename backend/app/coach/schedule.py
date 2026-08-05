@@ -11,7 +11,7 @@ and fires each beat at its configured local hour, at most once per local day.
 """
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -63,7 +63,7 @@ def to_local(db: DbSession, dt: datetime) -> datetime:
     reads up to a day wrong in a far-from-UTC zone. Naive input is assumed UTC (SQLite
     round-trips DateTime(timezone=True) as naive)."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt.astimezone(local_tz(db))
 
 
@@ -113,8 +113,8 @@ def run_tick(db: DbSession, now_local: datetime | None = None) -> list[str]:
     if now.weekday() == 6 and _due_now(now, settings.weekly_review_hour):  # Sunday
         due.append("weekly_review")
 
-    from . import adapt
     from .. import monitor
+    from . import adapt
     for job in due:
         if _already_ran(db, job, today) or not _mark_ran(db, job, today):
             continue

@@ -30,7 +30,7 @@ HILL_SCORE = "/metrics-service/metrics/hillscore?calendarDate={date}"
 # Weight / body composition — range endpoint, chunked
 WEIGHT_RANGE = "/weight-service/weight/range/{start}/{end}"  # ?includeAll=true
 
-# Workout push — WRITE endpoints (docs/garmin-workout-push-plan.md; probed live 2026-07-10)
+# Workout push — WRITE endpoints (docs/garmin-workout-push.md; probed live 2026-07-10)
 WORKOUT_CREATE = "/workout-service/workout"  # POST payload -> {workoutId}
 WORKOUT_ITEM = "/workout-service/workout/{workout_id}"  # GET / PUT (payload must echo workoutId) / DELETE
 WORKOUT_SCHEDULE = "/workout-service/schedule/{workout_id}"  # POST {"date": ISO} -> {workoutScheduleId}

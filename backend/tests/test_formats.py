@@ -180,8 +180,9 @@ def test_per_surface_prompts_carry_no_hardcoded_format(db, module, fn):
 def test_context_extraction_assumes_no_race_format(db):
     """It captures bloods, injuries and travel — none of which depend on the race.
     It used to open by asserting the athlete was 'training for a backyard ultra'."""
-    from app.context import extract
     from datetime import date as _d
+
+    from app.context import extract
 
     text = extract._system(_d(2027, 1, 1), "Europe/London")
     assert "backyard" not in text and "ultra-runner" not in text

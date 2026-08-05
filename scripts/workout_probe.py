@@ -1,4 +1,4 @@
-"""Step-0 probe for Garmin workout push (docs/garmin-workout-push-plan.md).
+"""Step-0 probe for Garmin workout push (docs/garmin-workout-push.md).
 
 Creates ONE throwaway structured workout ("J2H4All: probe (delete me)") exercising
 everything v1 needs — warmup w/ HR-zone target, a repeat block with pace-target

@@ -10,7 +10,7 @@ oauth_credential row written by the connect flow (runtime-obtained fallback).
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 
 import httpx
@@ -73,7 +73,7 @@ async def exchange_code(code: str) -> dict:
 
 def store_refresh_token(db: Session, refresh_token: str, scopes: str = SCOPE) -> None:
     cred = db.get(OAuthCredential, PROVIDER)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if cred is None:
         db.add(OAuthCredential(provider=PROVIDER, refresh_token=refresh_token, scopes=scopes, updated_at=now))
     else:

@@ -177,10 +177,11 @@ def _check_athlete(r: Report) -> None:
     """Configuration can be perfect while the coach still has no idea who it is
     coaching. That is invisible from the environment, so look in the database."""
     try:
+        from sqlalchemy import select
+
         from .context.store import profile_view
         from .db import SessionLocal
         from .models import Goal
-        from sqlalchemy import select
 
         db = SessionLocal()
         try:

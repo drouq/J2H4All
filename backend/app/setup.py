@@ -45,11 +45,12 @@ def _safe(fn, default):
 
 
 def steps(db) -> list[Step]:
+    from sqlalchemy import func, select
+
     from .config import get_settings
     from .context.store import profile_view
     from .models import Activity, Goal, MacroPlan
     from .plan import store as plan_store
-    from sqlalchemy import func, select
 
     s = get_settings()
     out: list[Step] = []
@@ -102,12 +103,12 @@ def steps(db) -> list[Step]:
         ("Sync is switched off." if not s.garmin_sync_enabled else
          "Connected." if s.garth_token else "No Garmin token - no physiology data."),
         "Run `python -m app.garmin.login` on your home machine (Garmin blocks datacenter "
-        "IPs), then paste the token below.",
+        "IPs), then paste the token here.",
     ))
     out.append(Step(
         "history", "Training history", n_activities > 0,
         (f"{n_activities} activities imported." if n_activities else "Nothing imported yet."),
-        "Run `python -m app.jobs full_import` to pull your history. The coach plans off "
+        "Import it here, or run `python -m app.jobs full_import`. The coach plans off "
         "what your body has already absorbed, so this matters more than it looks.",
     ))
 

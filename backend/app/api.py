@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from . import setup as app_setup
 from .auth import current_user
 from .config import get_settings
 from .context import extract as ctx_extract
@@ -17,7 +18,6 @@ from .models import Heartbeat
 from .plan import generate as plan_generate
 from .plan import proposals as plan_proposals
 from .plan import store as plan_store
-from . import setup as app_setup
 
 router = APIRouter(prefix="/api", tags=["api"])
 

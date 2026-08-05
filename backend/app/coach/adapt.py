@@ -25,9 +25,9 @@ def refresh_from_garmin(db: DbSession) -> None:
 
 def post_sync_coaching(db: DbSession) -> None:
     """After a sync: read completed runs, then raise a red flag if something's acute."""
+    from ..telegram import send_proposal_card_sync
     from . import postrun, redflag
     from .schedule import local_today
-    from ..telegram import send_proposal_card_sync
 
     today = local_today(db)                     # user-local day, not server-UTC
 
@@ -55,8 +55,8 @@ def post_sync_coaching(db: DbSession) -> None:
 
 
 def run_weekly_review(db: DbSession, today: date | None = None) -> bool:
-    from . import weekly
     from ..telegram import send_proposal_card_sync
+    from . import weekly
 
     refresh_from_garmin(db)  # review on the freshest data; it also weighs data age
     result = weekly.run_review(db, today)

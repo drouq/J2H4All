@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # (scripts/home_sync.ps1) used during the 2026-07 Cloudflare-429 investigation.
     garmin_sync_enabled: bool = True
 
-    # Workout push (docs/garmin-workout-push-plan.md): approved sessions become
+    # Workout push (docs/garmin-workout-push.md): approved sessions become
     # scheduled Garmin structured workouts. **LIVE in prod since 2026-07** — the
     # single-session verification passed and the dashboard sets this true on the web
     # service. The default stays False so a fresh/dev environment can't write to their

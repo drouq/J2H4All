@@ -16,12 +16,28 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DbSession
 
 from .calendar import oauth
-from .util import utcnow as _utcnow
 from .models import (
-    Activity, AvailabilityWindow, BloodMarker, Checkin, DietaryProfile, FitnessMarker,
-    Goal, InjuryLog, MacroPlan, Message, Note, Preference, Proposal, SecondaryRace,
-    Session, SessionResult, SyncRun, UserState, WellnessDaily,
+    Activity,
+    AvailabilityWindow,
+    BloodMarker,
+    Checkin,
+    DietaryProfile,
+    FitnessMarker,
+    Goal,
+    InjuryLog,
+    MacroPlan,
+    Message,
+    Note,
+    Preference,
+    Proposal,
+    SecondaryRace,
+    Session,
+    SessionResult,
+    SyncRun,
+    UserState,
+    WellnessDaily,
 )
+from .util import utcnow as _utcnow
 
 logger = logging.getLogger(__name__)
 

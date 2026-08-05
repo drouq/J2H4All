@@ -108,10 +108,12 @@ code", send the 8 digits to your bot, done — no more digging a numeric chat ID
 `TELEGRAM_CHAT_ID` is no longer required to boot in production: unbound is the safe state,
 and requiring it would make pairing impossible in the one place it matters.
 
-Still open:
-- A guided step-by-step flow rather than a status list. The list is honest and useful;
-  a wizard that walks someone through in order would be better.
-- Triggering the history import from the web app (it is a CLI job today).
+**The guided flow.** The Setup panel now walks the steps in order: done steps collapse
+to a line, the next incomplete step opens with its controls inline, and a progress bar
+tracks the count. Any step can be reopened by clicking it — a wizard that won't let you
+go back and change your race would be worse than the list it replaced. **Training
+history imports from the panel too** (the button drives the same `/api/sync?mode=full`
+path as the CLI job).
 
 ## 4. Setup documentation — ✅ DONE
 
@@ -126,7 +128,7 @@ warnings / broken) so it can gate a deploy. It also looks in the database for th
 things that are invisible from the environment: whether an athlete profile exists, and
 whether the goal is still the placeholder.
 
-## 5. Housekeeping — mostly done
+## 5. Housekeeping — ✅ DONE
 
 The ~150 `PRD §N` comment citations are gone: they pointed at a private spec that isn't
 published, so they were dead references for anyone reading this code. Most were pure
@@ -134,13 +136,14 @@ parentheticals and came out mechanically; the ~15 that carried meaning in prose 
 rewritten to keep the substance ("PRD §11.4: approval writes the store AND the calendar"
 became "Approval writes the store AND the calendar").
 
-Still open:
-- `docs/garmin-workout-push-plan.md` is a historical design record with resolved
-  decisions. Keep for rationale, or fold the conclusions into ARCHITECTURE.md.
-- `scripts/home_sync.ps1` is a residential-IP fallback from before the native refresh
-  grant worked. Still useful for re-bootstrapping; not needed in normal operation.
-- Optional lint hardening: enable ruff's `I` (import sort) and `UP` (modernization) rules
-  if the repo-wide churn is ever wanted.
+`docs/garmin-workout-push-plan.md` (an implementation plan full of resolved sign-offs)
+became `docs/garmin-workout-push.md`, a reference for the shipped behaviour — the API
+surface, the session→workout mapping, the lifecycle rules and the accepted risks are the
+parts anyone touching `garmin/workouts.py` actually needs. Ruff's `I` (import sort) and
+`UP` (modernization) rules are on; the sweep was mechanical (79 fixes) and retired the
+`E702` carve-out by writing the one throttle idiom it protected as a normal import.
+`scripts/home_sync.ps1` stays: it is the residential re-bootstrap path when a Garmin
+refresh token lapses, which is an operational fallback rather than cruft.
 
 ---
 

@@ -8,8 +8,6 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
-from ..util import RUN_TYPES, as_dt as _as_dt
-
 from ..models import (
     Activity,
     Checkin,
@@ -20,6 +18,8 @@ from ..models import (
     WellnessDaily,
 )
 from ..plan.summary import context_for_prompt, garmin_summary
+from ..util import RUN_TYPES
+from ..util import as_dt as _as_dt
 
 
 def _pace(avg_speed_mps: float | None) -> str | None:

@@ -80,7 +80,7 @@ rediscover them yourself.
 ```
 backend/           FastAPI app (app/), Alembic migrations, tests (pytest), prompt_eval.py
 frontend/          React 18 + Vite + TypeScript SPA, built into frontend/dist
-docs/              Garmin connectivity report, workout-push design
+docs/              Garmin connectivity report, workout-push reference
 scripts/           Home-sync fallback (see the Garmin note in ARCHITECTURE.md)
 render.neon.yaml   Deployment blueprint: web service + 3 cron jobs
 .env.example       Every environment variable the app reads

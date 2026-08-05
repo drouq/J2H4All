@@ -6,8 +6,9 @@ sync_run audit trail, and loud-not-silent failure alerts via Telegram.
 
 import logging
 import threading
+import time
 import traceback
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -35,7 +36,7 @@ _sync_lock = threading.Lock()
 def _parse_gmt(s: str | None) -> datetime | None:
     if not s:
         return None
-    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    return datetime.strptime(s, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
 
 
 def _parse_local(s: str | None) -> datetime | None:
@@ -395,8 +396,8 @@ def run_sync(kind: str = "incremental") -> SyncRun:
         # Degrade loudly, routed by cause: a rejected garth token gets an
         # actionable re-auth ping; anything else defers to the staleness watchdog.
         try:
-            from .client import GarminAuthError
             from .. import monitor
+            from .client import GarminAuthError
             if isinstance(exc, GarminAuthError):
                 monitor.alert_garmin_auth(db)
             else:
@@ -418,7 +419,7 @@ def backfill_self_eval(days: int = 400, limit: int | None = None) -> dict:
     cutoff = _date.today() - timedelta(days=days)
     rows = db.scalars(
         select(Activity).where(
-            Activity.start_time_utc >= datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=timezone.utc),
+            Activity.start_time_utc >= datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=UTC),
             Activity.feel.is_(None), Activity.rpe.is_(None),
         ).order_by(Activity.start_time_utc.desc())
     ).all()
@@ -449,7 +450,7 @@ def backfill_weather(days: int = 150, limit: int | None = None) -> dict:
     cutoff = _date.today() - timedelta(days=days)
     rows = db.scalars(
         select(Activity).where(
-            Activity.start_time_utc >= datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=timezone.utc),
+            Activity.start_time_utc >= datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=UTC),
             Activity.weather_temp_c.is_(None),
         ).order_by(Activity.start_time_utc.desc())
     ).all()
@@ -468,7 +469,7 @@ def backfill_weather(days: int = 150, limit: int | None = None) -> dict:
             if updated % 20 == 0:
                 db.commit()  # commit in batches — a 2-year run holds the DB connection
                              # open across many HTTP calls; a managed pooler would drop it
-        import time as _t; _t.sleep(0.3)  # be gentle on the free weather API
+        time.sleep(0.3)  # be gentle on the free weather API
     db.commit()
     db.close()
     logger.info("Weather backfill: %d activities updated", updated)
@@ -480,13 +481,14 @@ def backfill_streams(days: int = 400, limit: int | None = None) -> dict:
     per-second stream for existing runs that predate stream capture. Idempotent — skips
     runs already marked streams_synced. Streams are large, so it's paced and capped."""
     from datetime import date as _date
+
     from .streams import compute_stream_metrics
     db = SessionLocal()
     client = GarminClient(db=db)
     cutoff = _date.today() - timedelta(days=days)
     rows = db.scalars(
         select(Activity).where(
-            Activity.start_time_utc >= datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=timezone.utc),
+            Activity.start_time_utc >= datetime(cutoff.year, cutoff.month, cutoff.day, tzinfo=UTC),
             Activity.streams_synced.is_(False),
         ).order_by(Activity.start_time_utc.desc())
     ).all()
@@ -505,7 +507,7 @@ def backfill_streams(days: int = 400, limit: int | None = None) -> dict:
                 db.commit()
         except Exception as exc:
             logger.warning("Stream backfill failed for activity %s: %s", a.id, exc)
-        import time as _t; _t.sleep(0.3)  # streams are heavy — be gentle on Garmin
+        time.sleep(0.3)  # streams are heavy — be gentle on Garmin
     db.commit()
     db.close()
     logger.info("Stream backfill: %d runs with metrics", updated)

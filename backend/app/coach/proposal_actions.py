@@ -34,8 +34,8 @@ def _garmin_line(applied: dict) -> str:
 
 
 def handle(db: DbSession, action: str, proposal_id: int, chat_id: str, message_id: int, cb_id: str) -> None:
-    from ..telegram import answer_callback, edit_message_text, send_message_sync
     from ..plan import proposals as plan_proposals
+    from ..telegram import answer_callback, edit_message_text, send_message_sync
     from . import revise
 
     if action == "edt":
