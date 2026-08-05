@@ -73,9 +73,24 @@ These principles override convenience wherever they conflict with it.
 | `coach/` | `doctrine` ← **the coaching brain**, `signals`, `completion`, `postrun`, `redflag`, `weekly`, `brief`, `debrief`, `schedule`, `chat`, `adapt` |
 | `calendar/` | `oauth`, `client`, `sync` (reconcile), `routes` |
 
-**To tune the coach, edit `coach/doctrine.py`.** Every LLM system prompt composes from
-`full_doctrine(db)` (heavy surfaces) or `compact_doctrine(db)` (frequent, cheap surfaces),
-so the coaching knowledge lives in one place instead of drifting across prompts.
+**To tune the coach, edit `coach/doctrine.py` (shared) or `coach/formats/` (per race
+type).** Every LLM system prompt composes from `full_doctrine(db)` (heavy surfaces) or
+`compact_doctrine(db)` (frequent, cheap surfaces), so the coaching knowledge lives in one
+place instead of drifting across prompts.
+
+The coaching brain is split deliberately. `doctrine.py` holds the **shared endurance
+core** — the aerobic engine, the ~10%/week ramp, decoupling as the durability KPI, gut
+training, the medical line. That is the same for a first marathon and a 24-hour backyard,
+and it is the part that has been tuned against real data. `coach/formats/` holds the ~30%
+that genuinely differs: what the race demands, how it is executed, and the handful of
+training sessions the format requires. `Goal.format` selects one.
+
+Why layered rather than one doctrine per format: writing four standalone doctrines is how
+you get four mediocre coaches, because the shared reasoning gets re-derived badly and
+drifts apart. Formats are a **fixed registry, not free text** — a rule that must hold on
+every session shouldn't depend on a model inventing the doctrine at onboarding, the same
+reasoning that keeps the model tier in `config.py`. An unknown format resolves to
+`generic`, which coaches general endurance and asks what the race is.
 
 ### Frontend (`frontend/src/`)
 

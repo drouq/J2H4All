@@ -1,8 +1,8 @@
 """Coaching doctrine — the single source of the coach's endurance brain (PRD §2.5, §13).
 
 Every LLM prompt surface composes its system prompt from the blocks here, so the
-backyard-specific coaching knowledge lives in ONE place instead of being re-written
-per prompt (and drifting). To tune the coach, edit this file.
+coaching knowledge lives in ONE place instead of being re-written per prompt (and
+drifting). To tune the coach, edit this file (shared) or coach/formats/ (per race).
 
 Two tiers (PRD §17):
 - full_doctrine(db)    — Opus surfaces (plan generation, weekly review, coaching
@@ -28,9 +28,11 @@ acclimatization protocols, no structured strength programming, no formal
 HRV-readiness scoring system) — the coach may MENTION those topics but never
 builds systems around them.
 
-NOTE: this doctrine is still BACKYARD-ULTRA specific. Making it format-agnostic
-(a shared endurance core plus a per-format layer) is the main open work — see
-ROADMAP.md.
+FORMAT-AGNOSTIC. This module holds the SHARED endurance core — the aerobic engine,
+the ramp, decoupling as the durability KPI, gut training, the guardrails. What a
+particular race DEMANDS, how it is EXECUTED, and its handful of extra training
+sessions live in `coach/formats/`, selected by `Goal.format`. Editing here changes
+coaching for every athlete; editing a format changes it only for that race type.
 """
 
 from datetime import date, timedelta
@@ -38,6 +40,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 
 from ..models import Goal, SecondaryRace
+from . import formats
 
 # ---------------------------------------------------------------------------
 # Athlete & goal facts (dynamic — from the store)
@@ -47,6 +50,7 @@ from ..models import Goal, SecondaryRace
 # before onboarding). Deliberately generic and relative to today: it must never look
 # like a real race, and it must never go stale into the past. Replace it by
 # configuring a real Goal row — see ROADMAP.md, "athlete profile & onboarding".
+_FALLBACK_FORMAT = "backyard-ultra"  # matches plan.store.ensure_seed's placeholder
 _FALLBACK_LOOP_KM = 6.706          # the standard backyard-ultra loop (~4.167 mi)
 _FALLBACK_TARGET_LAPS = 24
 _FALLBACK_HORIZON_DAYS = 182       # ~6 months out: a plausible, obviously-unset horizon
@@ -70,11 +74,16 @@ def _facts(db, today: date) -> dict:
     goal = db.scalar(select(Goal).where(Goal.status == "active").limit(1)) if db is not None else None
     races = db.scalars(select(SecondaryRace).order_by(SecondaryRace.date)).all() if db is not None else []
     g = {
-        "loop_km": goal.loop_km, "target_laps": goal.target_laps, "race_date": goal.race_date,
+        "format": goal.format, "race_date": goal.race_date,
+        "loop_km": goal.loop_km, "target_laps": goal.target_laps,
+        "distance_km": goal.distance_km, "elevation_gain_m": goal.elevation_gain_m,
+        "target_time": goal.target_time,
         "floor_note": goal.floor_note, "stretch_note": goal.stretch_note,
     } if goal else {
-        "loop_km": _FALLBACK_LOOP_KM, "target_laps": _FALLBACK_TARGET_LAPS,
+        "format": _FALLBACK_FORMAT,
         "race_date": today + timedelta(days=_FALLBACK_HORIZON_DAYS),
+        "loop_km": _FALLBACK_LOOP_KM, "target_laps": _FALLBACK_TARGET_LAPS,
+        "distance_km": None, "elevation_gain_m": None, "target_time": None,
         "floor_note": None, "stretch_note": None,
     }
     rs = [{"name": r.name, "date": r.date, "distance_km": r.distance_km,
@@ -125,13 +134,14 @@ def athlete_block(db, today: date | None = None) -> str:
     f = _facts(db, today or _default_today(db))
     g, today = f["goal"], f["today"]
     days = (g["race_date"] - today).days
+    fmt = formats.get(g.get("format"))
     lines = [
         "THE ATHLETE & THE GOAL:",
         identity_line(db),
-        f"A serious ultra-runner. A-race: a BACKYARD ULTRA on {g['race_date'].isoformat()} "
-        f"({days} days / ~{max(days, 0) // 7} weeks away) — a {g['loop_km']} km loop started on the hour, "
-        f"every hour, target {g['target_laps']} laps (~{g['target_laps']}h). Every lap must be finished "
-        "inside the hour; whatever time is left over is the only rest there is.",
+        # The A-race sentence is rendered BY THE FORMAT: a marathon's goal is a target
+        # time, a trail ultra's is distance and vertical, a backyard's is laps on the
+        # hour. One template would have to omit whichever fields don't fit.
+        fmt.goal_line(g, today, days),
         # Everything personal — age, history, physiology quirks, diet, climate, crew,
         # race location, prior attempts at this race — reaches the coach through the
         # CONTEXT STORE (coaching notes, preferences, injuries, bloods, dietary
@@ -175,7 +185,7 @@ def athlete_block(db, today: date | None = None) -> str:
             f"Secondary race ({r['priority']}): {r['name']}, {r['distance_km']:g} km {r['type'] or 'race'}, "
             f"{r['date'].isoformat()} ({(r['date'] - today).days} days away, ~{gap_wk:.1f} weeks before the A-race) "
             "— a sharpener with a recovery cost: mini-taper (3-5 days), never a full taper, then a deliberate "
-            "rebound before the final backyard-specific block. Reason about the interplay; never treat races independently."
+            "rebound before the final race-specific block. Reason about the interplay; never treat races independently."
         )
     lines.append(
         "TRAINING BACKGROUND: read it from the DATA, not from assumption. The full-history volume (monthly "
@@ -196,28 +206,7 @@ def athlete_block(db, today: date | None = None) -> str:
 # Static doctrine blocks (edit these to tune the coach)
 # ---------------------------------------------------------------------------
 
-RACE_DEMANDS = """WHAT THIS RACE DEMANDS (reason from these, not from generic ultra doctrine):
-- A backyard is won by whoever degrades slowest. The outcome is decided by durability — holding an easy, \
-repeatable effort hour after hour — not by speed. Pace and VO2max matter only insofar as they make the loop \
-pace a smaller fraction of their capacity.
-- The hourly reset IS the format: consistency beats banked time. Running a lap faster buys rest but spends \
-the legs; the target is the slowest comfortable lap that still leaves a workable reset window, repeated \
-identically, including the walk/run split inside the loop.
-- Hourly fueling is the make-or-break variable: ~24 forced feeding opportunities, and gut failure — not the \
-legs — ends most backyard races. Fueling tolerance is trainable and must be trained.
-- Laps 15-24 happen through the night on a sleep-deprived brain. Night running, light, caffeine timing and \
-morale routines are part of the race, not an afterthought.
-- CLIMATE: check the race's conditions and the athlete's own (their timezone, their notes, the per-run \
-weather in the data) before reasoning about heat. Where the race is hot, heat management — pacing restraint \
-through the day laps, sodium and fluids, cooling at resets, and countering heat-suppressed appetite — is \
-co-equal with fueling as the make-or-break variable, and training in that climate is an asset that makes an \
-athlete acclimatized, not immune. Where it is cold or temperate, do not import heat doctrine: layering \
-through the night and staying warm at resets is the live problem instead.
-- The loop is runnable and repetitive: the mechanical challenge is an unchanged gait for 24 h, so the risks \
-are repetitive-strain and soft-tissue breakdown; cadence economy and tissue durability matter far more than \
-climbing strength. This is NOT a mountain race — vertical gain is not a training priority."""
-
-TRAINING_DOCTRINE = """HOW WE TRAIN FOR IT:
+SHARED_TRAINING = """HOW WE TRAIN (general endurance principle — the format block above adds to this):
 - Time-on-feet is the currency. Prescribe long work by duration first; distance and pace are outputs. The \
 engine is built with high-volume conversational running (roughly 80/20 easy:hard, most volume solidly Z2).
 - `garmin_summary.training_load_balance` is an objective 80/20 check: Garmin's monthly anaerobic / low-aerobic \
@@ -232,17 +221,8 @@ intensity. Ground durability judgments in their stream metrics when present.
 - Ramp volume conservatively off their CURRENT chronic load — ~10%/week as a ceiling not a target, a down-week \
 every 3rd-4th week, and never grow volume and intensity in the same week. Chronic consistency beats heroic \
 weeks; a missed week is absorbed, never "made up".
-- Back-to-back long runs (moderate long on consecutive days) build fatigue-resistance at lower injury risk \
-than a single monster run — the second run teaches running on tired legs, the backyard's core skill.
-- Backyard simulation (backyard-specific block): repeated-loop sessions run on the clock — e.g. 3-6 x \
-~40-50 min "laps" started each hour, rehearsing the full hourly routine: pace discipline, stop, fuel, sit, \
-restart. Dress rehearsals for pacing, fueling, kit and mind.
-- Walking is a race skill: deliberate brisk walk segments inside long runs. The race-day walk/run split is \
-rehearsed in training, never improvised.
 - Gut training: from the build phase onward, long runs practice race fueling, progressing toward the hourly \
 race dose. The gut adapts like a muscle; race-day fueling must be boring by race week.
-- Sparing sleep-adjacent exposure late in the build (a pre-dawn start or late-evening long run, headlamp on) \
-to rehearse running tired — never at the cost of systematic recovery.
 - Heat & humidity (when the athlete trains or races in it): expect elevated HR for pace, judge such sessions \
 by HR/RPE rather than pace, and treat hydration + sodium as part of every long session. If the coaching notes \
 record a MEASURED sweat profile (a lab sweat-sodium concentration, a weigh-in sweat rate), use those ACTUAL \
@@ -257,37 +237,7 @@ run-frequency caps, optional-session marking, gym habits. Structure every plan a
 one genuinely conflicts with the goal, say so explicitly and propose, don't silently override.
 - Strength: brief practical nudges toward calf/foot/hip resilience are welcome; never write structured \
 strength plans.
-- Taper doctrine: the backyard taper trims volume hard (roughly halving over the final 2 weeks) while keeping \
-frequency and small touches of intensity; the goals are full glycogen, a rebuilt sleep bank, and zero \
-staleness. B-races get a mini-taper only, then a deliberate rebound."""
-
-EXECUTION_DOCTRINE = """RACE-DAY EXECUTION (when strategy comes up):
-- Lap pacing: settle immediately into the slowest lap that leaves a comfortable reset, identical effort every \
-lap; going faster early is spending, not banking. The walk/run split repeats from lap 1.
-- The hourly routine is scripted and sacred: finish -> fuel FIRST -> then sit (feet up; don't lie down in the \
-early hours), kit for the next lap sorted before resting; everything laid out in the pit, decisions pre-made.
-- Fueling: whatever training showed they tolerate (typically progressing toward 60-90 g carbs/hour, with fluids \
-and sodium scaled to the heat); more real food in the early hours, simpler sugars as the race accumulates; a \
-missed feed is a red flag to correct at the very next reset, not later.
-- Night plan: hold caffeine in reserve until genuinely needed (typically from evening), then dose to effect; \
-warm layer and headlamp staged before dark; expect pace-for-effort to drift at night and protect the reset \
-window rather than chase earlier lap times.
-- Sleep: with a 24-lap target the default is pushing through on caffeine, light and pit routine; micro-naps \
-only if lap margin genuinely allows them.
-- Feet & chafe: hotspots pre-taped, lube renewed at resets, dry socks and a shoe change staged mid-race.
-- Crew: if the athlete races crewed, script the crew like kit — feeds staged per reset, next-lap kit laid \
-out, explicit per-lap instructions, and crew coverage through the ENTIRE night confirmed well in advance. \
-Crew going home mid-race is a classic and entirely preventable cause of a backyard ending. If they race \
-uncrewed, the pit has to be self-service and pre-staged to the same standard, and that changes the reset \
-budget — plan for it explicitly.
-- The evening transition (roughly 20:00-midnight, often laps ~12-16) is the classic danger window: \
-accumulated fatigue, under-eating, the pull of bed, and co-runners quitting on the same lap all land \
-together. Pre-commit the rules ("quitting decisions were made at the start line, not at 9pm"), rehearse \
-night laps in training, and brief the crew to carry them through that window specifically. If the athlete's \
-notes record where a PREVIOUS attempt ended and why, treat that as the highest-value fact you have and \
-train directly against it.
-- Psychology: the race is only ever "one more lap". Anchor the athlete to the process and the floor goal, \
-never to the total distance remaining. Social quitting is contagious — they run THEIR race when others drop."""
+- Taper doctrine (general): reduce volume over the final weeks while keeping FREQUENCY and a light touch of intensity, so the athlete arrives with full glycogen, a rebuilt sleep bank and no staleness. How hard to cut, and what to keep, is format-specific — see the block above. B-races get a mini-taper only, then a deliberate rebound."""
 
 CORRECTIONS_LINE = """CORRECTING YOURSELF: think in the thinking block, not in the summary. Don't narrate \
 your own mid-flight revisions to them — no "Correction:", no "actually, revising that", no showing the \
@@ -339,7 +289,7 @@ def timezone_line(db) -> str:
             pass
     return (
         f"TIME & TIMEZONE: the athlete is currently in {tz}. EVERY time you state — session times, "
-        "data ages, anything clock-based — must be on HIS local clock, never UTC. Data-block "
+        "data ages, anything clock-based — must be on THEIR local clock, never UTC. Data-block "
         "timestamps are already local where the key ends in `_local`; dates are their local dates. "
         "Never quote a raw UTC time back to them."
     )
@@ -349,11 +299,23 @@ def timezone_line(db) -> str:
 # Composition
 # ---------------------------------------------------------------------------
 
+def format_for(db, today: date | None = None):
+    """The race-format doctrine this install is coaching toward. Exposed so the plan
+    prompts can name the right phases instead of always saying 'backyard-specific'."""
+    return formats.get(_facts(db, today or _default_today(db))["goal"].get("format"))
+
+
 def full_doctrine(db, today: date | None = None, execution: bool = False) -> str:
-    """Complete doctrine for the Opus surfaces (macro plan, weekly review, chat)."""
-    blocks = [athlete_block(db, today), RACE_DEMANDS, TRAINING_DOCTRINE]
+    """Complete doctrine for the Opus surfaces (macro plan, weekly review, chat).
+
+    Composed as: who + goal (format-rendered) -> what THIS race demands (format) ->
+    the shared endurance core -> the format's training additions -> optionally
+    race-day execution (format) -> the cross-cutting guardrails. The shared core is
+    the tuned part and is never rewritten per format; see coach/formats/."""
+    fmt = format_for(db, today)
+    blocks = [athlete_block(db, today), fmt.race_demands, SHARED_TRAINING, fmt.training_addenda]
     if execution:
-        blocks.append(EXECUTION_DOCTRINE)
+        blocks.append(fmt.execution)
     # CORRECTIONS is an Opus-surface guardrail from the 2026-08-03 Opus-5 eval, where a
     # weekly review narrated a "Correction:" mid-change-note. Adding it took that to
     # zero on the re-run. (A companion scope-discipline instruction was written the
@@ -368,6 +330,7 @@ def compact_doctrine(db, today: date | None = None) -> str:
     """Distilled doctrine for the frequent Sonnet surfaces."""
     f = _facts(db, today or _default_today(db))
     g = f["goal"]
+    fmt = formats.get(g.get("format"))
     days = (g["race_date"] - f["today"]).days
     race_bits = "; ".join(
         f"{r['name']} {r['distance_km']:g} km ({r['priority']}-race) {r['date'].isoformat()} — sharpener, mini-taper only"
@@ -375,14 +338,12 @@ def compact_doctrine(db, today: date | None = None) -> str:
     )
     return (
         f"{identity_line(db)}\n"
-        "COACHING DOCTRINE (backyard-specific, compact):\n"
-        f"- A-race {g['race_date'].isoformat()} ({days} days out): {g['loop_km']} km loop on the hour, target "
-        f"{g['target_laps']} laps — won by degrading slowest. Durability (easy repeatable effort, low HR:pace "
-        "drift, metronomic pace), the hourly fueling reset, and sleep-deprived night laps decide it; speed does "
-        f"not.{' ' + race_bits + '.' if race_bits else ''}\n"
-        "- Training currency: time-on-feet, ~80/20 easy; back-to-back long runs; walk/run splits and race "
-        "fueling rehearsed inside long runs (the gut is trainable); volume ramps ~10%/week max with down-weeks; "
-        "never volume and intensity in the same week; chronic consistency beats any single session.\n"
+        f"COACHING DOCTRINE ({fmt.label}, compact):\n"
+        f"- A-race {g['race_date'].isoformat()} ({days} days out): {fmt.compact}"
+        f"{' ' + race_bits + '.' if race_bits else ''}\n"
+        "- Training currency: time-on-feet, ~80/20 easy; race fueling rehearsed inside long runs (the gut is "
+        "trainable); volume ramps ~10%/week max with down-weeks; never volume and intensity in the same week; "
+        "chronic consistency beats any single session.\n"
         "- Everything personal — history, physiology, diet, climate, injuries, life constraints — comes from "
         "the athlete state you are given (`coaching_notes`, `context.preferences`, injuries, bloods, dietary "
         "profile), never from assumption; where it's thin, say what you don't know. If they train or race in "

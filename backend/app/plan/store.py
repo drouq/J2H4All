@@ -94,6 +94,8 @@ def goal_view(db: DbSession, today: date | None = None) -> dict:
     return {
         "goal": {
             "format": goal.format, "loop_km": goal.loop_km, "target_laps": goal.target_laps,
+            "distance_km": goal.distance_km, "elevation_gain_m": goal.elevation_gain_m,
+            "target_time": goal.target_time,
             "race_date": goal.race_date.isoformat(),
             "days_to_race": (goal.race_date - today).days,
             "floor_note": goal.floor_note, "stretch_note": goal.stretch_note,

@@ -6,7 +6,7 @@ approval flow writes on approval, §11):
 - generate_sessions: the next ~30 days of detailed sessions (layer 2)
 
 The coach reasons over rolled-up Garmin summaries + context (§14), and must see
-the backyard-specific nature (§5) and the B-race interplay.
+the race format's demands and the B-race interplay.
 """
 
 import json
@@ -27,15 +27,15 @@ MACRO_TOOL_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "rationale": {"type": "string", "description": "Why this periodization, in 3-5 sentences, grounded in their current fitness and recovery."},
-        "b_race_approach": {"type": "string", "description": "How the B-race (if any) is handled: mini-taper (3-5 day sharpen, not a full taper) then a deliberate rebound before the final backyard-specific block."},
+        "b_race_approach": {"type": "string", "description": "How the B-race (if any) is handled: mini-taper (3-5 day sharpen, not a full taper) then a deliberate rebound before the final race-specific block. Empty string if there is no B-race."},
         "phases": {
             "type": "array",
-            "description": "Dated phases from now to race day: base -> build -> backyard-specific -> taper, with any B-race slotted in.",
+            "description": "Dated phases from now to race day, using the phase vocabulary given in the system prompt, with any B-race slotted in.",
             "items": {
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "name": {"type": "string", "description": "e.g. Base, Build, Backyard-specific, B-race sharpen, Rebound, Taper"},
+                    "name": {"type": "string", "description": "Phase name, from the vocabulary in the system prompt (plus B-race sharpen / Rebound where relevant)"},
                     "start_date": {"type": "string", "description": "ISO date"},
                     "end_date": {"type": "string", "description": "ISO date"},
                     "focus": {"type": "string", "description": "Primary adaptation this phase targets"},
@@ -116,9 +116,13 @@ def _call_guarded(what: str, key: str, call) -> dict:
 def generate_macro_plan(db, today: date) -> dict:
     system = (
         _system_base(db, today)
-        + "\n\nBuild a periodized MACRO PLAN from now to race day: dated phases (base -> build -> "
-        "backyard-specific -> taper) with weekly volume ranges and intensity focus, with the B-race's "
-        "mini-taper and rebound slotted in. Ground the ramp in their current weekly volume and acute:chronic "
+        # Phase vocabulary comes from the race format, so a marathon build isn't
+        # asked for a "backyard-specific" block and a backyard isn't asked for a
+        # "goal-pace" one. The tool schema stays format-neutral (it's static).
+        + "\n\nBuild a periodized MACRO PLAN from now to race day: dated phases ("
+        + doctrine.format_for(db, today).phases
+        + ") with weekly volume ranges and intensity focus, and the B-race's mini-taper and rebound "
+        "slotted in if there is one. Ground the ramp in their current weekly volume and acute:chronic "
         "load — do not prescribe a jump their recent training doesn't support. Phases must be contiguous and end on race day."
     )
     return _call_guarded("Macro-plan generation", "phases", lambda: call_tool(
@@ -138,7 +142,7 @@ def generate_sessions(db, today: date, macro: dict, days: int = SESSION_WINDOW_D
         _system_base(db, today)
         + f"\n\nGenerate detailed daily sessions for the next {days} days, consistent with the macro plan's "
         "current phase. Every session carries a 'purpose' (the why). Include easy/recovery days and rest days. "
-        "Add fueling notes where relevant (long runs, backyard-specific work). Respect treadmill windows and injuries. "
+        "Add fueling notes where relevant (long runs, race-specific work). Respect treadmill windows and injuries. "
         "The athlete's `context.preferences` are standing AGREEMENTS, not hints: before recording, count the "
         "run-days in each week (a short Z1 recovery jog IS a run) against their run-frequency cap, mark any "
         "optional run with '[Optional]' in its title, and structure strength days around their stated gym habits."

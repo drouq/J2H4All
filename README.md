@@ -22,21 +22,28 @@ their own.
 
 ## ⚠️ Read this before you start
 
-**This is a working app that is still mid-generalisation.** It began life tuned for one
-athlete and one race format, and that history still shows in two places:
+**This is a working app that is still mid-generalisation.**
 
-1. **The coaching doctrine is backyard-ultra specific.**
-   [`coach/doctrine.py`](backend/app/coach/doctrine.py) reasons about hourly laps, the
-   fueling reset and night laps. If you're training for a road marathon, the coach will
-   still talk to you about lap resets. Making it format-agnostic is the main open work —
-   see [ROADMAP.md](ROADMAP.md).
+**Supported race formats:** backyard ultra, trail/mountain ultra, road/flat ultra, road
+marathon and half. Set `Goal.format` and the coach reasons about *your* race — a
+marathoner gets goal-pace and threshold doctrine, a trail runner gets descent
+conditioning and cutoffs. An unrecognised format falls back to sound general endurance
+coaching and asks what the race actually is, rather than guessing.
+
+Two honest caveats:
+
+1. **Only the backyard format has been validated against a real athlete's season.** The
+   others were written from established endurance-coaching principle and reviewed, but
+   have not been run against a real build or a prompt eval. Treat them as a good starting
+   point to tune — [`coach/formats/`](backend/app/coach/formats/) is one small file per
+   format, deliberately easy to edit.
 2. **There is no onboarding flow yet.** A fresh install seeds a *placeholder* goal you
-   must replace, and your athlete profile (history, physiology, diet, constraints) is
-   entered through conversation rather than a wizard.
+   must replace, and your athlete profile (name, pronouns, history, physiology, diet,
+   constraints) is entered through conversation rather than a wizard. See
+   [ROADMAP.md](ROADMAP.md).
 
 **No personal data from the original install ships in this repo** — no athlete, no race,
-no medical history, no credentials. Every identifier is yours to fill in. But until the
-roadmap items land, expect to hand-edit `doctrine.py` for your own race.
+no medical history, no credentials. Every identifier is yours to fill in.
 
 **This is not medical advice.** The coach flags trends in your data and will tell you when
 something is worth discussing with a doctor. It does not diagnose and does not prescribe.

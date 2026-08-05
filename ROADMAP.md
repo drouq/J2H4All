@@ -28,38 +28,39 @@ fields via the usual extract → confirm → write loop. The web Context panel s
 coach thinks it's coaching, so wrong pronouns are visible at a glance rather than
 discovered in a morning brief.
 
-## 2. Format-agnostic doctrine *(blocks non-backyard athletes)*
+## 2. Format-agnostic doctrine — ✅ DONE
 
-`coach/doctrine.py` is backyard-ultra specific: hourly laps, the fueling reset, night laps,
-the crewed pit routine. A marathoner gets coached in the wrong idiom.
+`coach/formats/` holds one module per race format; `coach/doctrine.py` keeps the shared
+endurance core. `Goal.format` selects. Composition is: who + goal (rendered by the format)
+→ what THIS race demands → the shared core → the format's training additions → optionally
+race-day execution → the cross-cutting guardrails.
 
-**Don't write one doctrine per format** — that's how you end up with five mediocre coaches.
-Layer it instead. Reading the current file closely, `TRAINING_DOCTRINE` is already about
-70% universal endurance principle: time-on-feet, 80/20, the load-balance read, decoupling as
-the durability KPI, ~10%/week ramps with down-weeks, never volume and intensity in the same
-week, gut training, taper principles. Only a few items are format-specific.
+Shipped: **backyard-ultra**, **trail-ultra**, **road-ultra**, **road-marathon**, and
+**generic** (the honest fallback — coaches sound general endurance and asks what the race
+is, rather than inheriting whichever format happened to be the default). Aliases resolve
+near-misses (`marathon`, `UTMB`, `100k`); anything unrecognised degrades to generic and
+never raises. `Goal` gained `distance_km`, `elevation_gain_m` and `target_time`
+(migration 0016), since `loop_km`/`target_laps` mean nothing outside a backyard. The macro
+prompt takes its phase vocabulary from the format, so a marathon build is no longer asked
+for a "backyard-specific" block.
 
-**Wanted:** a shared endurance core (kept exactly as tuned) plus a thin per-format layer of
-race demands, race-day execution, and a few training additions — roughly 60 lines of new
-prose per format instead of 300. Support a **fixed enum** of formats, not free text: a rule
-that must hold every session shouldn't depend on a model inventing the doctrine at
-onboarding.
+Tests lock the property that matters in both directions: backyard concepts must not leak
+into a marathon, and marathon concepts must not leak into a backyard.
 
-Related schema work:
+⚠️ **Only the backyard format is validated.** The other three were written from
+established coaching principle and reviewed, but never run against a real athlete's season
+or a prompt eval — `prompt_eval.py` needs real state and only exercises two surfaces. They
+are a starting point to tune, not finished work. If you build a season on one, expect to
+edit its module.
 
-- `Goal` doesn't fit other formats. `loop_km` and `target_laps` are backyard-only; a
-  marathon needs a target time, a trail ultra needs distance, vert and cutoffs.
-- Phase names in the macro prompt (`base → build → backyard-specific → taper`) should come
-  from the format rather than being hardcoded in the prompt and the tool schema.
-- Two signals need *relabelling*, not rebuilding: heat acclimation is framed as a signal
-  for a hot race and should key off the race's actual climate; pace-CV is framed as "the
-  metronomic loop signal" when the metric itself is generic pace consistency.
-
-`completion.py`, `postrun.py`, the calendar and the workout push are already
-format-neutral.
-
-**Budget eval time inside this work, not after it.** `prompt_eval.py` only exercises two
-surfaces against real state, and it cannot validate a marathon doctrine at all.
+Still open here:
+- Two signals are still framed for the original race and should key off the goal:
+  `heat_acclimation` reads as a hot-race signal regardless of where the race is, and
+  pace-CV is labelled "the metronomic loop signal" when the metric is generic pace
+  consistency.
+- The web Plan panel still says "days to the backyard" rather than naming the format.
+- Nothing lets an athlete SET their format yet except editing the database — it needs to
+  join the goal step of onboarding (§3).
 
 ## 3. Onboarding *(blocks everyone; painful without it)*
 

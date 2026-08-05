@@ -290,9 +290,20 @@ class Goal(Base):
     __tablename__ = "goal"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    format: Mapped[str] = mapped_column(String(32), nullable=False)  # backyard-ultra
+    # Selects the race-format doctrine (coach/formats/): backyard-ultra, trail-ultra,
+    # road-ultra, road-marathon, or generic. Unknown values resolve to generic rather
+    # than raising — a typo must not take down every prompt.
+    format: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Backyard-only: the loop and how many laps are being chased.
     loop_km: Mapped[float | None] = mapped_column(Float)
     target_laps: Mapped[int | None] = mapped_column(Integer)
+    # Every other format: distance, and (trail) how much climbing. Nullable because
+    # which of these carries meaning depends entirely on the format.
+    distance_km: Mapped[float | None] = mapped_column(Float)
+    elevation_gain_m: Mapped[float | None] = mapped_column(Float)
+    # Free text, not seconds: it only ever feeds a prompt, and "sub-3:30" or "under
+    # 24h" is a more honest statement of a goal than a rounded integer.
+    target_time: Mapped[str | None] = mapped_column(String(32))
     race_date: Mapped[date] = mapped_column(Date, nullable=False)
     race_timezone: Mapped[str | None] = mapped_column(String(64))  # anchor for taper countdown
     floor_note: Mapped[str | None] = mapped_column(Text)
