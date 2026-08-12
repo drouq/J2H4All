@@ -466,13 +466,22 @@ def _handle_free_text(text: str) -> None:
         # a change discussed here reaches the plan/calendar/watch only on approval.
         send_typing()
         try:
-            answer, proposal = chat.ask_with_proposal(db, text, surface="telegram")
+            answer, proposal, mark_done = chat.ask_with_proposal(db, text, surface="telegram")
         except LLMNotConfigured:
             send_message_sync("The coaching model isn't configured, so I can't answer that yet.")
             return
         send_message_sync(answer)
         if proposal is not None:
             send_proposal_card_sync(proposal.id, "📝 Proposed plan change:\n\n" + proposal.summary)
+        if mark_done is not None:
+            # The athlete said they did a session off its planned day (gym, typically —
+            # a late run links itself from the watch). Confirm before writing: this
+            # rides an LLM tool call, so the tap is what stops "I'll do it tomorrow"
+            # from marking anything.
+            send_card_sync("✅ " + mark_done["text"], [[
+                {"text": "✅ Yes, mark it done", "callback_data": f"mkd:{mark_done['session_id']}"},
+                {"text": "❌ No", "callback_data": "mkd:no"},
+            ]])
         # Chat is also context capture (the Eponge pattern): offer to
         # save any durable facts the message carried — confirm-before-write.
         _offer_context_capture(db, text)
@@ -587,6 +596,24 @@ def _handle_callback(cb: dict) -> None:
             # want to tap several (or correct one) before typing anything.
             text, keyboard = debrief.render_card(db)
             edit_message_card(chat_id, message_id, text, keyboard)
+            return
+
+        if action == "mkd":  # confirm a session done off its planned day
+            if arg == "no":
+                answer_callback(cb_id, "Left as it was")
+                edit_message_text(chat_id, message_id, "No problem — nothing recorded.")
+                return
+            from .plan.store import mark_session_done
+            marked = mark_session_done(db, int(arg), note="Marked done on Telegram by the athlete.")
+            answer_callback(cb_id, "Marked ✓" if marked else "Already recorded")
+            edit_message_text(
+                chat_id, message_id,
+                "✅ Marked as completed." if marked else "Already recorded as completed — nothing to do.")
+            if marked:
+                # Mirror it onto the calendar now, rather than waiting for tomorrow's
+                # daily-sync reconcile, so the ✅ shows where the athlete will look for it.
+                from .calendar.sync import safe_reconcile
+                safe_reconcile(db)
             return
 
         if action in ("apr", "rej", "edt"):

@@ -388,7 +388,7 @@ def test_off_plan_reply_is_not_also_swallowed_by_the_debrief(db, monkeypatch):
     monkeypatch.setattr(tg, "_offer_context_capture", lambda *a, **k: None)
     answered = []
     monkeypatch.setattr(chat, "ask_with_proposal",
-                        lambda db, text, surface="telegram": (answered.append(text), ("Got it.", None))[1])
+                        lambda db, text, surface="telegram": (answered.append(text), ("Got it.", None, None))[1])
 
     s = _session(db, _TODAY - timedelta(days=2), duration=180)
     rid = _result(db, s, duration=121).id

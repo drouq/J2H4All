@@ -24,11 +24,20 @@ logger = logging.getLogger(__name__)
 # Session types a run activity may be linked against (planned-vs-actual): a run
 # must never attach to a gym/strength or rest session that shares the date.
 RUN_SESSION_TYPES = ("long_run", "easy", "recovery", "intervals", "tempo", "race")
-# Garmin activity types that complete a planned `strength` (gym) session. Matched
-# same-day only — gym isn't pushed as a structured workout, so there's no workoutId
-# to key off like runs. Mobility/yoga are deliberately excluded: they're a separate
-# routine, not the planned gym session, and would falsely mark it done.
+# Garmin activity types that complete a planned `strength` (gym) session. Mobility/
+# yoga are deliberately excluded: they're a separate routine, not the planned gym
+# session, and would falsely mark it done.
 STRENGTH_ACTIVITY_TYPES = ("strength_training",)
+# How far off its planned date a gym activity may sit and still complete the session.
+# A run carries the watch-selected `workoutId`, so a late run finds its own session at
+# any distance; gym is never pushed as a structured workout, leaving the date as the
+# only evidence — which is why this is a small window rather than a run-style open
+# match. Athletes shift a gym day routinely (the case this exists for: a Wednesday
+# session done Thursday, which same-day matching left pending forever). Typical gym
+# scheduling puts two weekly sessions a few days apart, so ±1 day cannot reach the
+# neighbouring slot; widening this past 2 would let one activity claim the other half
+# of the week and report both as done.
+GYM_LINK_TOLERANCE_DAYS = 1
 
 # The LLM schemas describe `type` as free text; the whole pipeline (rest checks,
 # PUSH_TYPES, calendar emoji, trends) does exact matches — so normalize at intake.
@@ -290,20 +299,116 @@ def apply_onboarding_draft(db: DbSession, payload: dict) -> dict:
 
 # ------------------------------------------------------------------ result linking (layer 3)
 
+def find_planned_session(db: DbSession, on_date: date, session_type: str) -> "Session | None":
+    """The planned session of `session_type` on `on_date` that a manual "I did this"
+    refers to — the one still lacking a result, since that's the one being reported.
+    Rest days are never completable. Used by the Telegram mark-done path."""
+    stype = _norm_type(session_type)
+    if stype == "rest":
+        return None
+    candidates = db.scalars(
+        select(Session).where(
+            Session.date == on_date, Session.status == "planned", Session.type == stype,
+        ).order_by(Session.id)
+    ).all()
+    for session in candidates:
+        if not db.scalar(select(SessionResult).where(SessionResult.session_id == session.id)):
+            return session
+    return None
+
+
+def mark_session_done(db: DbSession, session_id: int, note: str | None = None) -> bool:
+    """Record a session as completed on the athlete's own say-so. Returns True if this
+    call marked it, False if it already carried a result (idempotent — a double tap on
+    the confirmation card can't write twice).
+
+    No `activity_id`: there is no Garmin activity behind this, which is the whole point
+    — it exists for a session the watch never recorded, or one it recorded too far off
+    the planned day for `link_results` to match. The completion classifier reads
+    `completed`, and `NO_DELTA_TYPES` exempts gym from the planned-vs-actual delta, so a
+    gym session marked this way lands on ✅ exactly like a watch-linked one; a run marked
+    this way has no actuals to compare and so is not second-guessed either.
+
+    This is NOT an approval-gate bypass: nothing about the PLAN changes. It records
+    what the athlete did — the same class of write as reconcile's ✅-marking of
+    completed reality. The plan itself is untouched, and the athlete is the authority
+    on whether they trained."""
+    session = db.get(Session, session_id)
+    if session is None or session.status != "planned" or session.type == "rest":
+        return False
+    if db.scalar(select(SessionResult).where(SessionResult.session_id == session.id)):
+        return False
+    db.add(SessionResult(
+        session_id=session.id, activity_id=None, completed=True,
+        note=note or "Marked done by the athlete.", created_at=_utcnow(),
+    ))
+    db.commit()
+    return True
+
+
+def _record_result(db: DbSession, session: "Session | None", act: Activity) -> None:
+    """Record what Garmin says happened against the session it fulfilled."""
+    db.add(SessionResult(
+        session_id=session.id if session else None,
+        activity_id=act.id,
+        completed=True,
+        actual_distance_km=round((act.distance_m or 0) / 1000.0, 2) if act.distance_m else None,
+        actual_duration_min=round((act.duration_s or 0) / 60.0, 1) if act.duration_s else None,
+        actual_avg_hr=act.avg_hr,
+        created_at=_utcnow(),
+    ))
+
+
+def _match_gym_session(db: DbSession, act_date: date, *, exact_only: bool) -> "Session | None":
+    """The planned gym session a strength activity on `act_date` completes, or None.
+
+    Same day wins; failing that the nearest day within GYM_LINK_TOLERANCE_DAYS, PAST
+    before future at equal distance — an activity off its planned day is usually the
+    athlete catching up a session they missed, not doing next week's early. Sessions
+    that already carry a result are skipped, so the second gym of a day can't re-credit
+    the first's session (and a session marked done by hand stays untouched when the
+    watch's copy of the same workout syncs later — pending results are visible here
+    because queries autoflush).
+
+    `exact_only` is what keeps the window from stealing: `link_results` places every
+    same-day match first, so an activity ON the planned day always outranks a
+    neighbouring day's activity reaching for the same session."""
+    from datetime import timedelta
+
+    offsets = [0]
+    if not exact_only:
+        for n in range(1, GYM_LINK_TOLERANCE_DAYS + 1):
+            offsets += [-n, n]
+    for offset in offsets:
+        candidates = db.scalars(
+            select(Session).where(
+                Session.date == act_date + timedelta(days=offset),
+                Session.status == "planned", Session.type == "strength",
+            ).order_by(Session.id)
+        ).all()
+        for session in candidates:
+            if not db.scalar(select(SessionResult).where(SessionResult.session_id == session.id)):
+                return session
+    return None
+
+
 def link_results(db: DbSession, window_days: int = 45) -> int:
     """Match recent Garmin activities to the planned session they fulfilled and record
     a session_result (planned-vs-actual). Runs link to run sessions (by the workout the
-    athlete selected on the watch, else same-day); strength activities link to a same-day
-    planned gym session. The coaching 'read' is Phase 5; this is the linking + raw
-    actuals. Idempotent per activity."""
+    athlete selected on the watch, else same-day); strength activities link to a planned
+    gym session on the same day, or — in a second pass, once every same-day match is
+    placed — one within GYM_LINK_TOLERANCE_DAYS. The coaching 'read' is Phase 5; this is
+    the linking + raw actuals. Idempotent per activity."""
     from datetime import timedelta
 
     today = date.today()
     since = today - timedelta(days=window_days)
     acts = db.scalars(
         select(Activity).where(Activity.start_time_utc >= _as_dt(since))
+        .order_by(Activity.start_time_utc)  # deterministic: earlier activity claims first
     ).all()
     linked = 0
+    late_gym: list[Activity] = []
     for act in acts:
         atype = act.activity_type or ""
         is_run = any(atype.startswith(p) for p in RUN_TYPES)
@@ -338,26 +443,26 @@ def link_results(db: DbSession, window_days: int = 45) -> int:
                 )
         else:
             # Gym: a strength activity completes a planned `strength` session on the same
-            # day (no workoutId — gym isn't a pushed structured workout, so date-only).
-            # Only record when a gym session actually sits that day; a stray strength log
-            # on a non-gym day marks nothing (no orphan result to lock the activity out).
-            session = db.scalar(
-                select(Session).where(
-                    Session.date == act_date, Session.status == "planned",
-                    Session.type == "strength",
-                ).order_by(Session.id).limit(1)
-            )
+            # day, else one within GYM_LINK_TOLERANCE_DAYS — athletes shift a gym day and
+            # there is no workoutId to key off (gym isn't a pushed structured workout), so
+            # the date is the only evidence available. Only ever links to a session that
+            # has no result yet, so a day's activity can't double-count one already
+            # credited. Still records nothing when no gym session sits nearby: a stray
+            # strength log marks nothing, and leaves no orphan result to lock the
+            # activity out.
+            session = _match_gym_session(db, act_date, exact_only=True)
             if session is None:
+                late_gym.append(act)  # retry below, after every same-day match is placed
                 continue
-        db.add(SessionResult(
-            session_id=session.id if session else None,
-            activity_id=act.id,
-            completed=True,
-            actual_distance_km=round((act.distance_m or 0) / 1000.0, 2) if act.distance_m else None,
-            actual_duration_min=round((act.duration_s or 0) / 60.0, 1) if act.duration_s else None,
-            actual_avg_hr=act.avg_hr,
-            created_at=_utcnow(),
-        ))
+        _record_result(db, session, act)
+        linked += 1
+
+    for act in late_gym:
+        act_date = (act.start_time_local or act.start_time_utc).date()
+        session = _match_gym_session(db, act_date, exact_only=False)
+        if session is None:
+            continue
+        _record_result(db, session, act)
         linked += 1
     db.commit()
     return linked

@@ -47,11 +47,15 @@ One session → one running workout.
 not following a step list.
 
 **`strength` is deliberately skipped**, and it is worth knowing why, because it looks
-like an easy win. A pushed gym workout would carry a `workoutId`, which is exactly
-the missing signal that stops a *late* gym session auto-marking as done. But a real
-strength workout means prescribing exercises, and structured strength programming is
-explicitly out of scope (see ARCHITECTURE.md §5). The late-gym gap is not worth
-trading a scope rule for.
+like an easy win. A pushed gym workout would carry a `workoutId` — for a while that
+was the missing signal that stopped a *late* gym session auto-marking as done, which
+kept this idea on the table. That gap has since closed **in the linking layer**, where
+the missing id simply isn't needed: `link_results` matches a strength activity to a
+gym session within ±`GYM_LINK_TOLERANCE_DAYS`, and the coach-chat `mark_session_done`
+card covers anything wider or never recorded. So the reason to push gym workouts is
+gone rather than merely outweighed — and a real strength workout would mean
+prescribing exercises, which structured strength programming rules out anyway (see
+ARCHITECTURE.md §5). **Don't revisit this to solve late-gym marking.**
 
 ## Both ends of a workout get a target-free step
 
