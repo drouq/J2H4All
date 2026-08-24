@@ -3,7 +3,7 @@ planned-vs-actual, load, recovery trend, subjective check-ins, and the calendar
 reality ahead (treadmill windows, B-race proximity). Compact for prompts.
 """
 
-from datetime import date, timedelta
+from datetime import UTC, date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -343,6 +343,47 @@ def data_freshness(db: DbSession, today: date) -> dict:
         # True only when we actually have last night's overnight recovery (today's HRV).
         "overnight_recovery_is_current": age(hrv_d) == 0 if hrv_d is not None else False,
     }
+
+
+def recent_sleep_nights(db: DbSession, today: date, nights: int = 7) -> list[dict]:
+    """Per-night sleep VOLUME for the last `nights` nights: bedtime, wake time, and the
+    hours between them — plus Garmin's asleep-hours for contrast.
+
+    Why per-night and why the WINDOW: in the reference deployment a single ~4.5h night
+    reached the coach only as a 14-day rolling average it moved by ~15 minutes, so
+    nothing was said until the athlete's own tired-feeling logs arrived a day later. And
+    the window is the honest volume signal wherever the stage classification reads wrong
+    (restless legs, a small child — the same conditions the doctrine's sleep rule names):
+    a full night wrecked by restlessness and a genuinely short night can produce nearly
+    identical stage-classified asleep-hours, and only bedtime→wake tells them apart.
+    Zero extra Garmin calls: the timestamps are already in the stored sleep payload.
+
+    The *Local* timestamps are epoch-millis already expressed in the athlete's
+    wall-clock time, so they are formatted WITHOUT timezone conversion — rendering them
+    through the server's zone would shift the bedtime by the server-vs-athlete offset."""
+    from datetime import datetime
+
+    rows = db.scalars(
+        select(WellnessDaily).where(
+            WellnessDaily.date >= today - timedelta(days=nights - 1),
+            WellnessDaily.date <= today,
+        ).order_by(WellnessDaily.date)
+    ).all()
+    out = []
+    for w in rows:
+        dto = ((w.raw or {}).get("sleep") or {}).get("dailySleepDTO") or {}
+        start_ms, end_ms = dto.get("sleepStartTimestampLocal"), dto.get("sleepEndTimestampLocal")
+        entry: dict = {"date": w.date.isoformat()}
+        if start_ms and end_ms:
+            # utc formatting = no conversion: the epoch already encodes local wall time.
+            entry["to_bed"] = datetime.fromtimestamp(start_ms / 1000, tz=UTC).strftime("%H:%M")
+            entry["woke"] = datetime.fromtimestamp(end_ms / 1000, tz=UTC).strftime("%H:%M")
+            entry["in_bed_h"] = round((end_ms - start_ms) / 3_600_000, 2)
+        if w.sleep_seconds:
+            entry["asleep_h"] = round(w.sleep_seconds / 3600, 2)
+        if len(entry) > 1:  # a date alone says nothing — skip nights with no data at all
+            out.append(entry)
+    return out
 
 
 def deep_recovery(db: DbSession, today: date) -> dict:

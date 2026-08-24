@@ -1,7 +1,7 @@
 """Signal extraction from the training_status marker raw — training-load balance
 (80/20) and heat acclimation. Both must walk back past Garmin's frequent NULL
 snapshots to the most recent real one."""
-from datetime import date, timedelta
+from datetime import UTC, date, timedelta
 
 from app.models import FitnessMarker
 from app.plan.summary import heat_acclimation, training_load_balance
@@ -147,3 +147,79 @@ def test_a_long_training_run_is_not_a_race(db):
     "anything long is a race", which would delete real weeks from the history."""
     _run(db, 5558, date.today() - timedelta(days=10), 63.3, atype="trail_running")
     assert _race_activity_ids(db) == set()
+
+
+# ---- per-night sleep volume -------------------------------------
+# In the reference deployment a ~4.5h night reached the coach only as a 14-day average it moved by ~15 minutes, so
+# nothing was said until the athlete's own tired-feeling logs arrived. And wherever sleep scores read wrong the
+# stage-classified asleep-hours blur a restless full night into the same number as a
+# genuinely short one — only the bedtime→wake WINDOW tells them apart.
+
+from app.coach.signals import recent_sleep_nights  # noqa: E402
+from app.models import WellnessDaily  # noqa: E402
+
+
+def _night(db, d, *, start_ms=None, end_ms=None, asleep_s=None, score=None):
+    db.add(WellnessDaily(
+        date=d, sleep_seconds=asleep_s, sleep_score=score,
+        raw={"sleep": {"dailySleepDTO": {
+            "sleepStartTimestampLocal": start_ms, "sleepEndTimestampLocal": end_ms,
+        }}} if start_ms else {},
+        synced_at=_utcnow(),
+    ))
+    db.commit()
+
+
+def _ms(day, hh, mm):
+    """Epoch-millis for a LOCAL wall time, the way Garmin's *Local stamps encode it."""
+    from datetime import datetime
+    return int(datetime(day.year, day.month, day.day, hh, mm, tzinfo=UTC).timestamp() * 1000)
+
+
+def test_the_short_night_is_visible_per_night(db):
+    """The reference case: in bed 00:13, up 04:36 — invisible in any average, obvious here."""
+    today = date.today()
+    _night(db, today, start_ms=_ms(today, 0, 13), end_ms=_ms(today, 4, 36), asleep_s=14832)
+    nights = recent_sleep_nights(db, today)
+    assert nights == [{
+        "date": today.isoformat(), "to_bed": "00:13", "woke": "04:36",
+        "in_bed_h": 4.38, "asleep_h": 4.12,
+    }]
+
+
+def test_local_timestamps_are_formatted_without_conversion(db):
+    """The *Local epoch already encodes wall time. Rendering it through the server's
+    zone would shift the bedtime by the server-vs-athlete offset — on a +8 server a
+    23:56 bedtime would read 07:56."""
+    today = date.today()
+    _night(db, today, start_ms=_ms(today, 23, 56), end_ms=_ms(today, 23, 59), asleep_s=60)
+    assert recent_sleep_nights(db, today)[0]["to_bed"] == "23:56"
+
+
+def test_a_night_without_timestamps_still_reports_asleep_hours(db):
+    """Older rows predate the stored DTO or lack it; the volume signal degrades to
+    what exists rather than dropping the night."""
+    today = date.today()
+    _night(db, today, asleep_s=7 * 3600)
+    nights = recent_sleep_nights(db, today)
+    assert nights == [{"date": today.isoformat(), "asleep_h": 7.0}]
+
+
+def test_a_night_with_no_data_at_all_is_skipped(db):
+    """A bare date tells the coach nothing — an unworn watch shouldn't render as a
+    mysterious empty night."""
+    today = date.today()
+    _night(db, today, asleep_s=None)
+    assert recent_sleep_nights(db, today) == []
+
+
+def test_window_is_seven_nights_ordered(db):
+    today = date.today()
+    for i in range(10):  # 10 nights back; only the last 7 should return
+        d = today - timedelta(days=i)
+        _night(db, d, start_ms=_ms(d, 23, 0), end_ms=_ms(d, 23, 30) + 8 * 3600 * 1000,
+               asleep_s=7 * 3600)
+    nights = recent_sleep_nights(db, today)
+    assert len(nights) == 7
+    assert nights[0]["date"] == (today - timedelta(days=6)).isoformat()
+    assert nights[-1]["date"] == today.isoformat()

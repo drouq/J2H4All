@@ -221,6 +221,17 @@ rebuilding it would silently drop the formatting applied on the way out.
 **Before adding a model call to make a surface smarter, check what is already sitting unread
 in a column.**
 
+The same lesson resurfaced with sleep. A single ~4.5h night went unremarked because the
+coach only ever saw sleep as a 14-day rolling average — while the bedtime and wake
+timestamps sat in every stored wellness row. `recent_sleep_nights` now feeds the brief and
+the chat with per-night bed→wake windows, which is also the honest volume signal wherever
+the stage classification reads wrong (restless legs, a small child): a full night wrecked
+by disturbance and a genuinely short night can produce nearly identical stage-classified
+asleep-hours, and only the window tells them apart. One short night shapes the day's read;
+only a pattern reshapes the plan — deliberately not wired into the red-flag path. (The
+`*Local` sleep timestamps are epoch-millis already expressed in wall-clock time: format
+them without timezone conversion, or a +8 server renders a 23:56 bedtime as 07:56.)
+
 ### A capture surface that costs a sentence loses to one that costs a tap
 
 The evening debrief shipped with the subjective feel as a tap and the lifestyle log as free

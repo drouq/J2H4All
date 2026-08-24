@@ -79,6 +79,7 @@ def _context_block(db: DbSession, today: date) -> str:
         "plan": plan_view(db, upcoming_days=14),
         "recovery": signals.recovery_baseline(db, today),
         "recovery_deep": signals.deep_recovery(db, today),
+        "sleep_nights": signals.recent_sleep_nights(db, today),  # per-night bed→wake volume
         "fitness_markers": signals.latest_markers(db),
         "garmin": garmin_summary(db, today),
         "recent_runs": signals.recent_runs(db, today),

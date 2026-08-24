@@ -164,7 +164,13 @@ def athlete_block(db, today: date | None = None) -> str:
         "A low sleep number, a POOR Training Readiness or a low Body Battery ALONE must not drive a "
         "conservative call when resting HR and HRV sit at baseline. This sharpens the read, it does not blunt "
         "it: a genuinely elevated resting HR, a suppressed HRV, or a skin-temp/respiration spike is still a "
-        "real flag — discount the sleep-derived SCORES, never the direct signals."
+        "real flag — discount the sleep-derived SCORES, never the direct signals. "
+        "SLEEP VOLUME is the exception, and it is judged from the bedtime→wake WINDOW (sleep_nights: "
+        "in_bed_h), never from the stage-classified asleep-hours — whenever sleep scores read wrong for this "
+        "athlete, the stages blur a full night wrecked by disturbance into the same asleep-hours as a "
+        "genuinely short night, and only the window tells them apart. A night well short of the athlete's own "
+        "pattern is a real recovery fact even with HRV/RHR at baseline — one short night shapes the day's "
+        "read; only a pattern reshapes the plan."
     )
     # The athlete's own account of what makes THEIR data read wrong. This is the
     # highest-value personalisation there is: it changes what every number means,

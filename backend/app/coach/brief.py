@@ -28,6 +28,10 @@ def system_prompt(db, today=None) -> str:
         "fitness language. Weave in `recovery_deep` only when it's telling: elevated waking respiration or a "
         "skin-temp deviation ≥ ~1°C = possible incoming illness (say so plainly); restless_moments contextualize "
         "their sleep score per the doctrine's sleep rule — high restlessness vs THEIR OWN baseline, not vs zero. "
+        "`sleep_nights` is their last week of bed→wake windows, per night: when last night's in_bed_h is well "
+        "short of their own pattern, SAY SO and weigh it in the day's read — a genuinely short night is a "
+        "recovery fact even when HRV/RHR look fine, and it is exactly what the sleep-score rule tells you the "
+        "score can't show you. One short night shapes today; only a pattern reshapes the plan. "
         "Use the `data_freshness` block for honesty about data age: STATE the age of any recovery reading you "
         "cite when it isn't from today (e.g. 'HRV from 2 days ago'), and never present an old number as this "
         "morning's. Use `recent_lifestyle` (their end-of-day logs: alcohol, illness, poor/restless sleep, "
@@ -65,6 +69,10 @@ def build_brief(db: DbSession, today: date | None = None) -> str:
         ],
         "recovery": signals.recovery_baseline(db, today),
         "recovery_14d": g["recovery_14d"],  # carries avg_sleep_h — the prompt asks for a sleep trend
+        # Per-night bed→wake windows: a single short night is INVISIBLE in the 14-day
+        # average above, and stage-classified asleep-hours can't tell a short night from
+        # a restless full one. See recent_sleep_nights and the doctrine's sleep rule.
+        "sleep_nights": signals.recent_sleep_nights(db, today),
         "recovery_deep": signals.deep_recovery(db, today),
         "data_freshness": signals.data_freshness(db, today),
         "fitness_markers": signals.latest_markers(db),
