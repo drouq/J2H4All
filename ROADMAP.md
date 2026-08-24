@@ -147,6 +147,34 @@ refresh token lapses, which is an operational fallback rather than cruft.
 
 ---
 
+## How this repo tracks upstream
+
+This was generalised from a single-athlete app that is still in daily use against a real
+training block. That app is where fixes surface first — a silent failure shows up when
+someone is relying on it — and they cross over here afterwards. Anything not specific to
+that one athlete is offered for rollout.
+
+What is adapted rather than copied:
+
+- **Personal data never crosses.** The invariant at the top of this file — no name, no
+  race, no medical history, no credentials, in the tree or the git history — outranks a
+  clean port. When upstream logic leans on such a constant, the port has to find a generic
+  mechanism. The race-exclusion fix is the worked example: upstream hardcodes four of its
+  athlete's race activity ids, which have no business in source anyone else runs, so here
+  races are recognised from a `race`-type session or Garmin's own `eventType` tag. That
+  turned out strictly better — nothing to maintain, and it gives every user a remedy for
+  their own pre-adoption history (tag it "Race" in Garmin Connect).
+- **Voice.** Comments and docstrings here say "the athlete", never a name or a gendered
+  pronoun; incidents read as "in the reference deployment", not as a date in someone's
+  training log. The reasoning is what transfers, not the diary entry.
+- **Single-athlete assumptions** are the whole point of this file, so an upstream change
+  that deepens one is a reason to reopen a roadmap item, not to port.
+
+Practical note: ruff here runs `I` and `UP` on top of upstream's rule set, so a file copied
+across usually needs `ruff check --fix` before it lints.
+
+---
+
 ## Deliberately not planned
 
 **A hosted, multi-tenant version.** Every table is effectively single-row-global
