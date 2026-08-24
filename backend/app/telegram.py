@@ -68,25 +68,48 @@ async def send_message(chat_id: str, text: str) -> None:
         logger.exception("Telegram sendMessage errored")
 
 
-def send_message_sync(text: str, chat_id: str | None = None) -> None:
+def send_message_sync(text: str, chat_id: str | None = None,
+                      reply_to_message_id: int | None = None) -> None:
     """Blocking send for non-async contexts (sync engine, cron jobs). Splits
-    messages over Telegram's 4096-char limit into chunks."""
+    messages over Telegram's 4096-char limit into chunks.
+
+    `reply_to_message_id` threads the message under an existing one — used to hang a
+    card's outcome off the card itself, so the two read as one exchange."""
     chat_id = chat_id or _default_chat()
     url = _api_url("sendMessage")
     if not url or not chat_id:
         logger.warning("Telegram not configured; dropping outbound message")
         return
     for chunk in _chunk(text, 4000):
+        body = {"chat_id": chat_id, "text": format_html(chunk), "parse_mode": "HTML"}
+        if reply_to_message_id is not None:
+            # allow_sending_without_reply: a deleted card must not swallow the outcome.
+            body["reply_to_message_id"] = reply_to_message_id
+            body["allow_sending_without_reply"] = True
+            reply_to_message_id = None  # only the first chunk threads
         try:
-            resp = httpx.post(
-                url, json={"chat_id": chat_id, "text": format_html(chunk), "parse_mode": "HTML"}, timeout=15
-            )
+            resp = httpx.post(url, json=body, timeout=15)
             if resp.status_code != 200:
                 logger.error("Telegram sendMessage failed: %s", resp.text)
                 # A formatting error must never drop the message — resend as plain text.
                 httpx.post(url, json={"chat_id": chat_id, "text": chunk}, timeout=15)
         except httpx.HTTPError:
             logger.exception("Telegram sendMessage errored")
+
+
+def clear_message_buttons(chat_id: str, message_id: int) -> None:
+    """Drop a card's buttons, leaving its TEXT exactly as sent.
+
+    The alternative — `edit_message_text` with an outcome — replaces the card wholesale,
+    so approving the Sunday review deleted the review itself: the reasoning, the change
+    note, everything the athlete had just been asked to judge, gone the moment they
+    judged it. Editing only the markup cannot damage the text, and notably cannot
+    RE-RENDER it: the callback payload carries the message as PLAIN text, so any attempt
+    to rebuild it would silently lose the formatting `format_html` applied on the way
+    out."""
+    _post_sync("editMessageReplyMarkup",
+               {"chat_id": chat_id, "message_id": message_id,
+                "reply_markup": {"inline_keyboard": []}})
 
 
 def _chunk(text: str, size: int) -> list[str]:

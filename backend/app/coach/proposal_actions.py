@@ -33,9 +33,23 @@ def _garmin_line(applied: dict) -> str:
     return f"\nGarmin workouts: {gw.get('created',0)} added · {gw.get('updated',0)} updated · {gw.get('deleted',0)} removed."
 
 
+def _resolve_card(chat_id: str, message_id: int, outcome: str) -> None:
+    """Retire a card without destroying it: strip the buttons, then post the outcome as
+    a threaded reply to the card itself.
+
+    Replacing the card's text with the outcome — the obvious implementation — means
+    approving the Sunday weekly review DELETES the review: the reasoning, the change
+    note and the session list the athlete was asked to judge, gone at the moment they
+    judge it. What they need afterwards is exactly what they needed before: the content,
+    plus a record of the decision. Two messages, both kept."""
+    from ..telegram import clear_message_buttons, send_message_sync
+    clear_message_buttons(chat_id, message_id)          # text untouched, buttons gone
+    send_message_sync(outcome, reply_to_message_id=message_id)
+
+
 def handle(db: DbSession, action: str, proposal_id: int, chat_id: str, message_id: int, cb_id: str) -> None:
     from ..plan import proposals as plan_proposals
-    from ..telegram import answer_callback, edit_message_text, send_message_sync
+    from ..telegram import answer_callback, send_message_sync
     from . import revise
 
     if action == "edt":
@@ -50,27 +64,34 @@ def handle(db: DbSession, action: str, proposal_id: int, chat_id: str, message_i
         return
 
     if action == "rej":
+        answer_callback(cb_id, "Rejected")
         try:
             plan_proposals.reject(db, proposal_id)
-            answer_callback(cb_id, "Rejected")
-            edit_message_text(chat_id, message_id, "❌ Rejected — plan unchanged.")
+            _resolve_card(chat_id, message_id, "❌ Rejected — plan unchanged.")
         except plan_proposals.ProposalConflict:
-            answer_callback(cb_id, "Already resolved")
-            edit_message_text(chat_id, message_id, "Already resolved.")
+            _resolve_card(chat_id, message_id, "Already resolved — no change made.")
         except KeyError:
-            answer_callback(cb_id, "Not found")
+            _resolve_card(chat_id, message_id, "That proposal no longer exists.")
         return
 
     if action == "apr":
+        # Acknowledge the tap BEFORE doing the work. Telegram invalidates a callback
+        # query after ~15s, and an approval takes far longer: it writes the store, then
+        # reconciles the calendar (tens of event operations) and pushes every workout to
+        # Garmin (each PUT + unschedule + reschedule, rate-limit throttled) — over a
+        # minute end to end on a real plan change. Acking afterwards therefore ALWAYS
+        # failed on exactly the approvals that matter: the button spun until it errored
+        # while the approval was in fact succeeding, which is the most alarming possible
+        # rendering of "it worked". The outcome still arrives, in the card reply below.
+        answer_callback(cb_id, "Approving…")
         try:
             result = plan_proposals.approve(db, proposal_id)
-            answer_callback(cb_id, "Approved ✓")
-            edit_message_text(chat_id, message_id,
-                              "✅ Approved — plan updated." + _calendar_line(result.get("applied", {}))
-                              + _garmin_line(result.get("applied", {})))
+            _resolve_card(chat_id, message_id,
+                          "✅ Approved — plan updated." + _calendar_line(result.get("applied", {}))
+                          + _garmin_line(result.get("applied", {})))
         except plan_proposals.ProposalConflict:
-            answer_callback(cb_id, "Already resolved")
-            edit_message_text(chat_id, message_id, "Already resolved — no change made.")
+            _resolve_card(chat_id, message_id, "Already resolved — no change made.")
         except KeyError:
-            answer_callback(cb_id, "Not found")
+            # No second answer_callback: one query gets one answer, and we already used it.
+            _resolve_card(chat_id, message_id, "That proposal no longer exists.")
         return

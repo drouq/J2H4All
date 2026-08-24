@@ -53,6 +53,89 @@ PARSE_SCHEMA = {
 }
 
 
+def _actuals_line(r) -> str:
+    """'52 min · 8.5 km · avg HR 135' from whatever the result actually carries."""
+    bits = []
+    if r.actual_duration_min:
+        bits.append(f"{round(r.actual_duration_min)} min")
+    if r.actual_distance_km:
+        bits.append(f"{r.actual_distance_km:g} km")
+    if r.actual_avg_hr:
+        bits.append(f"avg HR {r.actual_avg_hr}")
+    return " · ".join(bits)
+
+
+def todays_training(db: DbSession, today: date) -> str:
+    """What the athlete DID today, with the coach's read of it - or "" on an empty day.
+
+    Keyed off the ACTIVITY's own date, never the session's. That distinction is the whole
+    point: a scheduled workout selected on the watch can be run whenever it suits, so
+    `link_results` matches by `workoutId` with no date constraint at all and a session is
+    completed days early or days late. Keying off the session date instead means the
+    debrief stays silent on exactly the evenings training happened, and speaks up on the
+    session's planned day when nothing did - the two worst days to get it wrong. When the
+    planned date is not today the card says so, because "you did Friday's run" is the
+    useful sentence.
+
+    The read (`session_result.read_summary`) is a planned-vs-actual write-up the cheap
+    tier generates on every sync. It used to reach nobody: it fed the weekly review and
+    answered questions in chat, but nothing pushed it, while this card asked "how did
+    today land?" as fixed text that did not know whether the day held a long run, a gym
+    session or nothing. Costs no new LLM call - the debrief beat syncs first, and that
+    sync is what writes the read.
+
+    Also covers a session marked done by hand (no activity behind it) and an UNPLANNED
+    run, which has no session and so no read - it still happened, and a debrief that
+    ignored it would be asking about a day it had not looked at."""
+    from datetime import datetime, time, timedelta
+
+    from sqlalchemy import select as _select
+
+    from ..models import Activity, SessionResult
+    from ..models import Session as PlannedSession
+    from ..util import RUN_TYPES
+
+    lo = datetime.combine(today, time.min)
+    hi = lo + timedelta(days=1)
+    rows = db.execute(
+        _select(SessionResult, Activity, PlannedSession)
+        .join(Activity, Activity.id == SessionResult.activity_id)
+        .outerjoin(PlannedSession, PlannedSession.id == SessionResult.session_id)
+        .where(Activity.start_time_local >= lo, Activity.start_time_local < hi,
+               SessionResult.completed.is_(True))
+        .order_by(SessionResult.id)
+    ).all()
+    # Sessions reported done by hand (mark_session_done): no activity, dated today.
+    hand_marked = db.execute(
+        _select(SessionResult, PlannedSession)
+        .join(PlannedSession, PlannedSession.id == SessionResult.session_id)
+        .where(SessionResult.activity_id.is_(None), SessionResult.completed.is_(True),
+               PlannedSession.date == today)
+        .order_by(SessionResult.id)
+    ).all()
+    if not rows and not hand_marked:
+        return ""
+
+    out = []
+    for r, act, s in rows:
+        if s is not None:
+            head = f"✅ {s.title}"
+            if s.date != today:      # run early or late - name the day it was for
+                head += f" (planned {s.date.strftime('%a %d %b')})"
+        else:
+            kind = "run" if any((act.activity_type or "").startswith(t) for t in RUN_TYPES) else "session"
+            head = f"✅ Unplanned {kind}"
+        actuals = _actuals_line(r)
+        if actuals:
+            head += f"\n{actuals}"
+        if r.read_summary:
+            head += f"\n\n{r.read_summary}"
+        out.append(head)
+    for r, s in hand_marked:
+        out.append(f"✅ {s.title}\n(marked done)")
+    return "\n\n".join(out)
+
+
 def render_card(db: DbSession, today: date | None = None) -> tuple[str, list[list[dict]]]:
     """(text, inline_keyboard) for the debrief — feel taps, life-flag taps, and a
     free-text invite. Re-rendered after every tap (buttons kept, ✓ on what's landed)
@@ -62,12 +145,20 @@ def render_card(db: DbSession, today: date | None = None) -> tuple[str, list[lis
     if today is None:
         from .schedule import local_today
         today = local_today(db)
-    text = (
-        "🌙 Daily debrief — how did today land, and anything I can't see on your watch?\n\n"
+    done = todays_training(db, today)
+    ask = (
         "Tap your overall feel, then flag anything that was off. Add a line for detail "
         "worth having — a niggle · how much you drank · travel · nutrition · an extra "
         "workout or fueling you practiced. Taps alone are fine on a quiet day."
     )
+    if done:
+        # Lead with what actually happened: "how did that land" only means something
+        # when it names the session it is asking about.
+        text = (f"🌙 Daily debrief\n\n{done}\n\n"
+                f"How did that land, and anything I can't see on your watch?\n\n{ask}")
+    else:
+        text = ("🌙 Daily debrief — how did today land, and anything I can't "
+                "see on your watch?\n\n" + ask)
     ci = checkin.today_row(db, today)
     feel_key = checkin.quick_key_for(ci)
     flags = lifestyle.logged_flags(db, today)

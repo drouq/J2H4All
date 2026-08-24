@@ -193,6 +193,34 @@ forever, and cron schedules do slip. A beat now fires on the **first tick at or 
 local slot, within a bounded catch-up window. The window deliberately never crosses
 midnight, so a long outage can't deliver a "morning" brief in the evening.
 
+### Surface what you already computed before you compute more
+
+Two surfaces were throwing away work the system had already done.
+
+The **debrief** asked "how did today land?" as fixed text, identical whether the day held a
+long run, a gym session or nothing — while a planned-vs-actual read of every session, which
+the cheap tier writes on **every sync**, reached nobody. It fed the weekly review and
+answered questions in chat, and otherwise sat unread in a column. The card now opens with
+the session and its read, at no extra model cost: the debrief beat syncs first, and that
+sync is what writes the read.
+
+It is keyed off the **activity** date, never the session date. A scheduled workout selected
+on the watch can be run whenever it suits, and `link_results` matches by `workoutId` with no
+date constraint — so a session is completed days early or days late. Keying off the session
+date means going silent on exactly the evenings training happened, and speaking up on the
+planned day when nothing did. When the two differ the card names the planned day, because
+"you did Friday's run" is the useful sentence.
+
+**Resolving an approval card** used to replace its text with the outcome, so approving the
+Sunday review *deleted the review* — the reasoning and session list you were asked to judge,
+gone at the moment you judged it. Now the buttons are stripped (an `editMessageReplyMarkup`,
+which cannot touch text) and the outcome arrives as a threaded reply. Editing only the markup
+is also the sole safe option: the callback payload carries the message as **plain** text, so
+rebuilding it would silently drop the formatting applied on the way out.
+
+**Before adding a model call to make a surface smarter, check what is already sitting unread
+in a column.**
+
 ### A capture surface that costs a sentence loses to one that costs a tap
 
 The evening debrief shipped with the subjective feel as a tap and the lifestyle log as free
