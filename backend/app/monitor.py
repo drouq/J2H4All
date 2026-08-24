@@ -109,6 +109,98 @@ def alert_garmin_auth(db: DbSession) -> bool:
     return True
 
 
+def alert_workout_push_failed(db: DbSession, detail: object) -> bool:
+    """Ping when a Garmin workout push fails, at the moment it fails.
+
+    The push is the one surface whose output is read on a device the app never sees: the
+    watch. When it broke in the reference deployment the only signal was a parenthetical
+    on the approval card ("Garmin workout push issue: HTTP Error 404:") appended to an
+    otherwise successful message — so it went unnoticed for over two weeks while every
+    plan change stopped reaching the watch. A failure that only whispers is a failure
+    nobody hears.
+
+    12h cooldown — a push happens per approval, so a bad afternoon could otherwise ping
+    several times for one cause. Best-effort: never let alerting break an approval that
+    has already been applied."""
+    try:
+        if _on_cooldown(db, "alert_workout_push", 12):
+            return False
+        first_line = str(detail).splitlines()[0][:200] if str(detail) else "unknown error"
+        _send(
+            f"⌚ Couldn't update your watch with the new plan: {first_line}\n"
+            f"The plan, calendar and app are fine — it's only the watch that's behind, so "
+            f"treat what's on it as the OLD plan until this clears."
+        )
+        logger.warning("Workout-push failure alert sent: %s", first_line)
+        return True
+    except Exception:
+        logger.exception("alert_workout_push_failed itself failed")
+        return False
+
+
+# The plan may legitimately sit un-pushed for a while (no approvals, no changes), so a
+# fixed staleness window like the sync's would be meaningless here. What IS meaningful:
+# the stored plan moved and the watch never caught up. This grace lets an approval's own
+# push land (and a retry follow) before we call it a problem.
+WORKOUT_PUSH_LAG_HOURS = 6
+
+
+def workout_push_lag(db: DbSession) -> tuple[float, str] | None:
+    """(hours, session title) for the oldest future pushable session created after the
+    last successful watch push — i.e. plan the watch has not been told about. None when
+    the watch is current, when nothing is pushable, or when the push is switched off.
+
+    Deliberately compares against the PLAN rather than the clock: it self-clears the
+    moment a push succeeds, and stays quiet through a week with no plan changes."""
+    from .config import get_settings
+    from .garmin.workouts import PUSH_TYPES  # the one authoritative pushable set
+    from .models import Session as PlannedSession
+
+    settings = get_settings()
+    if not (settings.garmin_workout_push_enabled and settings.garmin_sync_enabled):
+        return None  # switched off on purpose — the approval card already says so
+    from .coach.schedule import local_today
+    pushable = sorted(PUSH_TYPES)
+    stamp = db.scalar(select(Preference).where(Preference.key == "last_push_garmin_at"))
+    try:
+        pushed_at = _as_utc(datetime.fromisoformat(stamp.value)) if stamp and stamp.value else None
+    except ValueError:
+        pushed_at = None
+    rows = db.scalars(
+        select(PlannedSession).where(
+            PlannedSession.status == "planned",
+            PlannedSession.type.in_(pushable),
+            PlannedSession.date >= local_today(db),
+        ).order_by(PlannedSession.created_at)
+    ).all()
+    unpushed = [s for s in rows if pushed_at is None or _as_utc(s.created_at) > pushed_at]
+    if not unpushed:
+        return None
+    oldest = unpushed[0]
+    return (_utcnow() - _as_utc(oldest.created_at)).total_seconds() / 3600, oldest.title or "a session"
+
+
+def check_workout_push_stale(db: DbSession) -> bool:
+    """Watchdog for a plan the watch never received. Runs from the hourly tick, so it
+    catches the case `alert_workout_push_failed` cannot: a push never ATTEMPTED (a flag
+    drifted off, a path that silently skipped it). Once/day."""
+    lag = workout_push_lag(db)
+    if lag is None:
+        return False
+    hrs, title = lag
+    if hrs < WORKOUT_PUSH_LAG_HOURS:
+        return False
+    if _on_cooldown(db, "alert_workout_push_stale", 24):
+        return False
+    _send(
+        f"⌚ Your watch hasn't been sent the current plan — \"{title}\" has been waiting "
+        f"{hrs:.0f}h. What's on the watch is the OLD plan; the app and calendar are right. "
+        f"Re-approving or tapping \"Push plan\" should clear it."
+    )
+    logger.warning("Workout-push staleness alert sent (%.0fh, %s)", hrs, title)
+    return True
+
+
 def alert_cron_failure(db: DbSession, job: str, err: object) -> bool:
     """Ping when a scheduled job/beat fails unexpectedly. Per-job cooldown (12h) so a
     repeatedly-failing beat doesn't spam. Best-effort: never let alerting raise."""

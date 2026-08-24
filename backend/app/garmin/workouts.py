@@ -12,7 +12,7 @@ Feature-flagged via GARMIN_WORKOUT_PUSH_ENABLED (default off).
 
 import logging
 import re
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
@@ -245,8 +245,70 @@ def build_workout(session: dict) -> dict:
 # ------------------------------------------------------------------ reconcile
 
 def _status_code(exc: Exception) -> int | None:
-    resp = getattr(getattr(exc, "error", None), "response", None)
-    return getattr(resp, "status_code", None)
+    """The HTTP status behind a Garmin client error — whichever client raised it.
+
+    TWO exception shapes reach here and both must work: garth wraps a requests error in
+    `.error` (the read path), while curl_cffi's HTTPError carries `.response` directly —
+    and curl_cffi is what the impersonated write path raises, which is every call in
+    this module. Reading only garth's shape made this return None for every write error,
+    so `None not in (404, 410)` was always true and all four "already gone, fine"
+    tolerances below silently behaved as `raise`. One workout deleted in Garmin Connect
+    then aborted the ENTIRE reconcile, in the orphan sweep, before anything could be
+    pushed — so no plan change reached the watch at all, while the approval card reported
+    only a terse `HTTP Error 404`. Keep both shapes.
+    """
+    for resp in (getattr(getattr(exc, "error", None), "response", None),
+                 getattr(exc, "response", None)):
+        code = getattr(resp, "status_code", None)
+        if code is not None:
+            return code
+    return None
+
+
+TITLE_PREFIX = "J2H: "  # only ever touch workouts we created
+# How far past the current plan the ghost sweep looks. A rolling plan is ~30 days, so
+# this comfortably covers leftovers from a previous, longer one.
+SWEEP_HORIZON_DAYS = 45
+
+
+def _live_scheduled(gc: GarminClient, start: date, end: date) -> dict[str, dict]:
+    """Every J2H workout Garmin currently has SCHEDULED in [start, end], keyed by
+    workout id -> {"date", "schedule_id", "title"}.
+
+    The schedule-authoritative half, mirroring the Google Calendar reconcile. Trusting
+    only store-side ids means a workout whose `Session` row lost its link — or whose id
+    was never committed because a reconcile died mid-run — is INVISIBLE: it can never be
+    cleaned up, and the next push happily adds a duplicate beside it. Enumerating what
+    Garmin actually holds is the only way to see those."""
+    out: dict[str, dict] = {}
+    seen: set[tuple[str, str]] = set()   # (date, workoutId) — months overlap, see endpoints
+    months, cur = [], date(start.year, start.month, 1)
+    while cur <= end and len(months) < 6:  # bounded: a plan window is ~1-2 months
+        months.append((cur.year, cur.month))
+        cur = date(cur.year + (cur.month == 12), (cur.month % 12) + 1, 1)
+    for year, month in months:
+        cal = gc.api(endpoints.CALENDAR_MONTH.format(year=year, month=month - 1)) or {}
+        for item in cal.get("calendarItems") or []:
+            wid, day = item.get("workoutId"), item.get("date")
+            if (item.get("itemType") != "workout" or wid is None or not day
+                    or not str(item.get("title") or "").startswith(TITLE_PREFIX)):
+                continue
+            if (day, str(wid)) in seen:
+                continue
+            seen.add((day, str(wid)))
+            if start.isoformat() <= day <= end.isoformat():
+                out[str(wid)] = {"date": day, "schedule_id": str(item.get("id")),
+                                 "title": item.get("title")}
+    return out
+
+
+def _delete_schedule(gc: GarminClient, schedule_id: str) -> None:
+    """Unschedule by id, tolerating an id Garmin no longer knows."""
+    try:
+        gc.api_write("DELETE", endpoints.WORKOUT_UNSCHEDULE.format(schedule_id=schedule_id))
+    except Exception as exc:  # noqa: BLE001
+        if _status_code(exc) not in (404, 410):
+            raise
 
 
 def _delete_remote(gc: GarminClient, s: Session) -> None:
@@ -296,9 +358,20 @@ def reconcile(db: DbSession) -> dict:
             Session.garmin_workout_id.isnot(None), Session.status != "planned"
         )
     ).all()
+    orphan_errors = 0
     for s in orphans:
-        _delete_remote(gc, s)
-        deleted += 1
+        # Per-orphan, so one that cannot be cleaned up does not cost every OTHER
+        # session its push. This loop runs before the desired-session loop, so an
+        # exception here used to mean nothing was pushed at all — the difference between
+        # "one stale workout lingers" and "the watch silently stops tracking the plan".
+        # It stays loud: logged, counted, and reported on the approval card. The session
+        # keeps its ids and is retried on the next reconcile.
+        try:
+            _delete_remote(gc, s)
+            deleted += 1
+        except Exception:  # noqa: BLE001 — never let one orphan block the push
+            orphan_errors += 1
+            logger.exception("Orphan workout cleanup failed for session %s; continuing", s.id)
 
     # Exclude sessions that already have a linked result (run earlier today):
     # re-PUTting + delete/recreate of the schedule on a completed day would
@@ -311,6 +384,30 @@ def reconcile(db: DbSession) -> dict:
             Session.date >= today, Session.id.not_in(resulted),
         ).order_by(Session.date)
     ).all()
+    # SCHEDULE-AUTHORITATIVE: what Garmin actually holds, not what our rows claim.
+    # Guarded — a failed listing degrades to the old store-side behaviour (correct, just
+    # blind to ghosts) rather than costing the athlete the push entirely. Looks past the
+    # end of the current plan on purpose: a ghost left by a LONGER previous plan sits
+    # beyond the last desired session, so a window stopping at the plan's end could never
+    # see it.
+    span_end = max([s.date for s in desired] + [today + timedelta(days=SWEEP_HORIZON_DAYS)])
+    try:
+        live = _live_scheduled(gc, today, span_end)
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not list Garmin's scheduled workouts; skipping the ghost sweep")
+        live = None
+
+    # Adopt the LIVE schedule id wherever ours disagrees. Without this a stale stored id
+    # makes the unschedule a no-op 404 and the reschedule then ADDS a second entry for
+    # the same workout and date — a duplicate on the watch.
+    if live:
+        for s in desired:
+            entry = live.get(s.garmin_workout_id or "")
+            if entry and entry["date"] == s.date.isoformat() and entry["schedule_id"] != s.garmin_schedule_id:
+                logger.info("Adopting live schedule id for session %s: %s -> %s",
+                            s.id, s.garmin_schedule_id, entry["schedule_id"])
+                s.garmin_schedule_id = entry["schedule_id"]
+
     for s in desired:
         payload = build_workout(_session_dict(s))
         if s.garmin_workout_id:
@@ -347,9 +444,39 @@ def reconcile(db: DbSession) -> dict:
             )
             s.garmin_schedule_id = str(resp.get("workoutScheduleId") or resp.get("id"))
 
+    # Sweep: any J2H workout Garmin has scheduled from today forward that does NOT back
+    # a desired session. The store-side orphan pass above can only see workouts a Session
+    # row still points at; this catches the rest — a revision-orphaned leftover, or one
+    # whose id was never persisted. Past dates are untouched: Garmin links a recorded
+    # activity to its scheduled workout, and deleting would erase that.
+    swept = 0
+    if live:
+        keep = {s.garmin_workout_id for s in desired if s.garmin_workout_id}
+        for wid, entry in live.items():
+            if wid in keep:
+                continue
+            try:
+                _delete_schedule(gc, entry["schedule_id"])
+                try:
+                    gc.api_write("DELETE", endpoints.WORKOUT_ITEM.format(workout_id=wid))
+                except Exception as exc:  # noqa: BLE001
+                    if _status_code(exc) not in (404, 410):
+                        raise
+                swept += 1
+                logger.info("Swept ghost workout %s (%s, %s)", wid, entry["date"], entry["title"])
+            except Exception:  # noqa: BLE001 — one ghost must not block the rest
+                orphan_errors += 1
+                logger.exception("Could not sweep ghost workout %s (%s)", wid, entry["date"])
+
     db.commit()
     from ..context.store import stamp_meta
     stamp_meta(db, "last_push_garmin_at")  # surfaced on the web Calendar panel
     result = {"created": created, "updated": updated, "deleted": deleted}
+    if swept:
+        result["ghosts_swept"] = swept
+    if live is None:
+        result["ghost_sweep"] = "skipped (could not list Garmin's schedule)"
+    if orphan_errors:
+        result["orphan_errors"] = orphan_errors
     logger.info("Garmin workout reconcile: %s", result)
     return result

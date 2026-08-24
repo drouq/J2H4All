@@ -19,6 +19,10 @@ and long runs was asked for and explicitly declined; see the test that guards it
 
 `build_workout` had no coverage at all before this file.
 """
+import types
+
+import pytest
+
 from app.garmin import workouts
 
 _TIME = workouts._END_TIME["conditionTypeKey"]
@@ -260,3 +264,64 @@ def test_the_stored_structure_is_never_mutated():
     assert plan["structure"] == original
     assert plan["structure"][0]["duration_min"] == 15
     assert plan["structure"][-1]["duration_min"] == 15
+
+
+# ---- _status_code must read BOTH client exception shapes  --------
+# The write path (workout push) goes through curl_cffi, whose HTTPError carries
+# `.response`; garth (the read path) wraps a requests error in `.error`. Reading
+# only garth's shape returned None for every write error, which turned all four
+# "404/410 = already gone, fine" tolerances into `raise` — one workout deleted in
+# Connect aborts the whole reconcile in its orphan sweep, so no plan change
+# reaches the watch at all. These tests pin both shapes.
+
+class _Resp:
+    def __init__(self, status_code):
+        self.status_code = status_code
+
+
+def test_status_code_reads_curl_cffi_shape():
+    """curl_cffi.requests.exceptions.HTTPError(msg, 0, response) -> exc.response."""
+    exc = Exception("HTTP Error 404: ")
+    exc.response = _Resp(404)
+    assert workouts._status_code(exc) == 404
+
+
+def test_status_code_reads_garth_shape():
+    """garth wraps the underlying requests error in `.error`."""
+    inner = types.SimpleNamespace(response=_Resp(410))
+    exc = Exception("boom")
+    exc.error = inner
+    assert workouts._status_code(exc) == 410
+
+
+def test_status_code_is_none_when_there_is_no_response():
+    """A transport error (no HTTP response at all) must NOT read as a tolerated
+    404 — it has to keep propagating."""
+    assert workouts._status_code(Exception("connection reset")) is None
+
+
+def test_delete_remote_tolerates_an_already_deleted_workout():
+    """The regression itself: a 404 from Garmin means the workout is already gone,
+    so the sweep clears our ids and moves on instead of aborting the reconcile."""
+    class _Gone:
+        def api_write(self, method, path, payload=None):
+            exc = Exception("HTTP Error 404: ")
+            exc.response = _Resp(404)
+            raise exc
+
+    s = types.SimpleNamespace(garmin_schedule_id="1733370698", garmin_workout_id="1650924754")
+    workouts._delete_remote(_Gone(), s)          # must not raise
+    assert s.garmin_schedule_id is None and s.garmin_workout_id is None
+
+
+def test_delete_remote_still_raises_on_a_real_error():
+    """A 500 is not 'already gone' — it must propagate (and the caller retries later)."""
+    class _Broken:
+        def api_write(self, method, path, payload=None):
+            exc = Exception("HTTP Error 500: ")
+            exc.response = _Resp(500)
+            raise exc
+
+    s = types.SimpleNamespace(garmin_schedule_id="1", garmin_workout_id="2")
+    with pytest.raises(Exception, match="500"):
+        workouts._delete_remote(_Broken(), s)

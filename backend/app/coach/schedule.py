@@ -137,4 +137,11 @@ def run_tick(db: DbSession, now_local: datetime | None = None) -> list[str]:
         monitor.check_stale(db)
     except Exception:
         logger.exception("Staleness watchdog failed")
+    # Twin watchdog for the watch: catches a plan the push never even ATTEMPTED to
+    # deliver (a flag drifted off, a path that skipped it) — the gap the failure alert
+    # on the approval path cannot see.
+    try:
+        monitor.check_workout_push_stale(db)
+    except Exception:
+        logger.exception("Workout-push watchdog failed")
     return fired

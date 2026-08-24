@@ -252,6 +252,72 @@ requires **both** a percentage deviation **and** an absolute gap before it asks 
 session. Strength sessions are exempt entirely — watch timers count rest between sets, so
 the delta measures nothing there.
 
+### One tolerated error, read from the wrong exception shape, silenced a whole surface
+
+The workout module tolerates 404/410 on delete — "already gone, fine" — by reading the
+status off the exception. Two clients raise here: garth wraps a requests error in
+`.error`, while the impersonated **write** path raises curl_cffi's `HTTPError`, which
+carries `.response` directly. Reading only garth's shape returned `None` for every write
+error, so `None not in (404, 410)` was always true and **every one of those tolerances
+silently behaved as `raise`** — docstrings promising tolerance that the code never once
+delivered.
+
+The damage came from *where* that lands. The reconcile sweeps orphaned workouts **before**
+it pushes anything, so a single workout deleted in Garmin Connect aborted the entire run
+before one session could be updated. In the reference deployment that meant the watch
+quietly carried a two-week-old plan while the app, the calendar and every approval card
+looked healthy.
+
+Three lessons, each now enforced in code:
+
+- **Parse errors from every client you actually use.** `_status_code` reads both shapes,
+  and still returns `None` when there is no HTTP response at all, so a transport error
+  keeps propagating instead of being mistaken for a tolerated 404.
+- **A cleanup loop must not be able to block the work it precedes.** The orphan sweep is
+  per-orphan: one uncleanable workout costs its own cleanup, not everyone else's push.
+- **A failure that only whispers is a failure nobody hears.** The sole signal used to be
+  a parenthetical appended to an otherwise cheerful approval card. Now a failed push
+  pings Telegram immediately, and an hourly watchdog catches a push that was never
+  *attempted* — comparing the last push against the **plan**, not the clock, so it
+  self-clears on the next good push and stays quiet through a week with no changes.
+
+### Store-side links cannot see their own ghosts
+
+The calendar reconcile learned this first and the workout push had the same blind spot: an
+event or workout whose row lost its link — or whose id was never committed because a
+reconcile died mid-run — is **invisible**. It can never be cleaned up, and the next push
+adds a duplicate beside it.
+
+Both are now authoritative over the live remote: enumerate what the provider actually
+holds, adopt the live ids where the stored ones disagree, and sweep anything that no longer
+backs a desired session. Bounded and defensive — past dates untouched (the provider links a
+recorded activity to its scheduled workout), only workouts this app created are ever
+deleted, one unsweepable ghost cannot block the rest, and a failed listing degrades to the
+old store-side behaviour rather than costing the athlete their plan. The sweep looks *past*
+the end of the current plan, because a ghost left by a longer previous plan sits beyond the
+last desired session.
+
+### A benchmark is only as good as what it measures
+
+`peak_4wk_avg_km` is read as "volume this athlete has already absorbed", and the coach
+leans on it when deciding how hard to ramp. It counted **race** efforts as training
+volume: in the reference deployment the peak read 84 km/wk from a window ending in a 170 km
+race week, against a true training peak of 72 — and the coach cited the inflated figure
+while justifying a ramp past its own 10%/week ceiling. The athlete caught it, not the
+system.
+
+Races are now excluded from the peak, recognised from a `race`-type session or from
+Garmin's own `eventType` tag — **tag your pre-adoption races as "Race" in Garmin Connect**
+and they stop inflating your ceiling. There is deliberately no hard-coded race list in
+this source. Race weeks stay *in* the weekly history, flagged `includes_race`: they are
+true history and hiding them would be a different kind of lie. `recent_4wk_avg_km` still
+counts everything, because "what have you done lately" is a question where a race really is
+load.
+
+**When a number is used as a benchmark, check what it measures before trusting a decision
+that leans on it.** This one was wrong from the first import and nothing could have noticed,
+because it was never obviously absurd.
+
 ### Alert cards must dedupe on the cause, not on pending-ness
 
 One cut-short long run produced **five** red-flag proposals over three days, because the

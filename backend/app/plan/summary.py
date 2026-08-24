@@ -4,6 +4,7 @@ The store keeps the full ~2 years, but the coach reasons over weekly/monthly
 rollups plus recent detail — not raw dumps. This builds that compact picture.
 """
 
+import logging
 from collections import defaultdict
 from datetime import date, timedelta
 
@@ -11,8 +12,43 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DbSession
 
 from ..context.store import snapshot as context_snapshot
-from ..models import Activity, FitnessMarker, WellnessDaily
+from ..models import Activity, FitnessMarker, Session, SessionResult, WellnessDaily
 from ..util import RUN_TYPES
+
+logger = logging.getLogger(__name__)
+
+
+def _race_activity_ids(db: DbSession) -> set[int]:
+    """Activities that are RACES rather than training.
+
+    `peak_4wk_avg_km` is read as "volume this athlete has already absorbed" — a capacity
+    benchmark for how hard they can be ramped. A race week is not that: it is a one-off
+    effort followed by weeks of recovery, and it is not repeatable. In the reference
+    deployment the peak read **84 km/wk from a 4-week window ENDING in a 170 km race
+    week**, counting the race itself as training volume; the true training peak was 72.
+    The coach cited the inflated number while justifying a ramp that exceeded its own
+    10%/week ceiling, and the athlete caught it rather than the system.
+
+    Two sources, both automatic:
+      * anything the PLAN calls a race — a `race`-type session with a linked result;
+      * anything Garmin itself marks as a race (`eventType`), which is how history from
+        BEFORE you started using this app can be excluded: tag those activities as
+        "Race" in Garmin Connect and they stop inflating your peak. There is deliberately
+        no hard-coded list here — your race history is yours, not something to ship in
+        source."""
+    ids: set[int] = set()
+    ids.update(db.scalars(
+        select(SessionResult.activity_id)
+        .join(Session, Session.id == SessionResult.session_id)
+        .where(Session.type == "race", SessionResult.activity_id.isnot(None))
+    ).all())
+    try:
+        ids.update(db.scalars(
+            select(Activity.id).where(Activity.raw["eventType"]["typeKey"].as_string() == "race")
+        ).all())
+    except Exception:  # noqa: BLE001 — JSON-path support varies; never break the summary
+        logger.debug("eventType race lookup unsupported on this backend; skipping")
+    return {int(i) for i in ids if i is not None}
 
 
 def _iso_week(d: date) -> str:
@@ -95,9 +131,16 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
     # Running volume over the FULL history: weekly (keyed by ISO-week Monday, for
     # the recent window + peak-block math) and monthly (the long arc, compact).
     acts = db.execute(
-        select(Activity.start_time_local, Activity.start_time_utc, Activity.activity_type,
-               Activity.distance_m, Activity.duration_s, Activity.elevation_gain_m)
+        select(Activity.id, Activity.start_time_local, Activity.start_time_utc,
+               Activity.activity_type, Activity.distance_m, Activity.duration_s,
+               Activity.elevation_gain_m)
     ).all()
+    race_ids = _race_activity_ids(db)
+    # Training-only twin of week_km, used ONLY for the peak block below. The plain
+    # weekly/monthly series keep races in: they are true history and the coach should see
+    # the race week for what it was, just never mistake it for training capacity.
+    week_km_training: dict[date, float] = defaultdict(float)
+    week_has_race: set[date] = set()
     week_km: dict[date, float] = defaultdict(float)
     week_runs: dict[date, int] = defaultdict(int)
     week_elev: dict[date, float] = defaultdict(float)
@@ -106,7 +149,7 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
     monthly_elev: dict[str, float] = defaultdict(float)
     longest_run_km = 0.0
     longest_run_date: date | None = None
-    for start_local, start_utc, atype, dist_m, dur_s, elev_m in acts:
+    for aid, start_local, start_utc, atype, dist_m, dur_s, elev_m in acts:
         if not atype or not any(atype.startswith(p) for p in RUN_TYPES):
             continue
         start = start_local or start_utc
@@ -115,6 +158,10 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
         d = start.date()
         km = (dist_m or 0) / 1000.0
         monday = d - timedelta(days=d.weekday())
+        if aid in race_ids:
+            week_has_race.add(monday)
+        else:
+            week_km_training[monday] += km
         week_km[monday] += km
         week_runs[monday] += 1
         week_elev[monday] += elev_m or 0.0
@@ -129,7 +176,9 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
     # will reason over the same history.
     weekly = [
         {"week": _iso_week(monday), "km": round(week_km[monday], 1), "runs": week_runs[monday],
-         "elev_m": round(week_elev[monday])}
+         "elev_m": round(week_elev[monday]),
+         # Flagged so a huge week reads as "they raced", not "they trained this much".
+         **({"includes_race": True} if monday in week_has_race else {})}
         for monday in sorted(week_km) if monday >= since
     ]
     monthly = [
@@ -154,7 +203,7 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
         while cur <= hi:
             mondays.append(cur)
             cur += timedelta(days=7)
-        series = [week_km.get(m, 0.0) for m in mondays]
+        series = [week_km_training.get(m, 0.0) for m in mondays]  # training only, no races
         for i in range(3, len(series)):
             avg = sum(series[i - 3:i + 1]) / 4
             if peak_4wk_avg_km is None or avg > peak_4wk_avg_km:
@@ -232,6 +281,8 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
         "recent_4wk_avg_km": recent_4wk_avg_km,
         "peak_4wk_avg_km": peak_4wk_avg_km,
         "peak_4wk_ending": peak_4wk_ending,
+        # Says out loud what the number is, so no reader has to assume.
+        "peak_4wk_basis": "training only — race efforts excluded",
         "longest_run_km": round(longest_run_km, 1),
         "longest_run_date": longest_run_date.isoformat() if longest_run_date else None,
         "vo2max_latest": vo2_latest,

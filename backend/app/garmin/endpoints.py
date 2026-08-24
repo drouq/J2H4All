@@ -35,3 +35,9 @@ WORKOUT_CREATE = "/workout-service/workout"  # POST payload -> {workoutId}
 WORKOUT_ITEM = "/workout-service/workout/{workout_id}"  # GET / PUT (payload must echo workoutId) / DELETE
 WORKOUT_SCHEDULE = "/workout-service/schedule/{workout_id}"  # POST {"date": ISO} -> {workoutScheduleId}
 WORKOUT_UNSCHEDULE = "/workout-service/schedule/{schedule_id}"  # DELETE
+# GET the month grid Garmin itself shows. `month` is ZERO-indexed (7 = August), and
+# the response includes adjacent-month days to fill out the weeks, so callers must
+# dedupe by (date, workoutId). This is what makes the workout reconcile
+# schedule-authoritative: it is the only way to see a scheduled workout whose
+# store-side link was lost.
+CALENDAR_MONTH = "/calendar-service/year/{year}/month/{month}"  # GET -> {calendarItems}

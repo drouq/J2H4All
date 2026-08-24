@@ -139,11 +139,27 @@ def _push_garmin_workouts(db: DbSession) -> dict:
     from ..garmin import workouts as garmin_workouts
 
     try:
-        return garmin_workouts.reconcile(db)  # returns {"skipped": ...} when the flag is off
+        result = garmin_workouts.reconcile(db)  # returns {"skipped": ...} when the flag is off
     except Exception as exc:  # noqa: BLE001 — never fail an approved plan on a Garmin error
-        logger = __import__("logging").getLogger(__name__)
         logger.exception("Garmin workout push after approval failed")
+        _alert_push_failure(db, exc)
         return {"error": f"garmin workout push failed: {exc}"}
+    # A push that ran but could not clear a stale workout still leaves the watch showing
+    # a session the plan dropped, so it is worth the same ping (see monitor).
+    if result.get("orphan_errors"):
+        _alert_push_failure(db, f"{result['orphan_errors']} stale workout(s) could not be removed")
+    return result
+
+
+def _alert_push_failure(db: DbSession, detail: object) -> None:
+    """Tell the athlete on Telegram. The watch is the one surface the app cannot see and
+    they cannot diff — before this, a failed push only whispered on the approval card,
+    which cost weeks of a stale watch in the reference deployment."""
+    from ..monitor import alert_workout_push_failed
+    try:
+        alert_workout_push_failed(db, detail)
+    except Exception:  # noqa: BLE001 — an alert must never fail an applied approval
+        logger.exception("Workout-push alert failed")
 
 
 def reject(db: DbSession, proposal_id: int) -> None:

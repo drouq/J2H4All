@@ -20,6 +20,12 @@ class FakeGarmin:
         self._wid = 0
         self._sid = 0
 
+    def api(self, path, **params):
+        """The schedule-authoritative sweep reads Garmin's month grid before pushing. An
+        empty grid means "nothing scheduled", so these tests keep exercising exactly what
+        they did before: the store-side push path."""
+        return {"calendarItems": []}
+
     def api_write(self, method, path, payload=None):
         self.calls.append((method, path))
         if method == "POST" and path == "/workout-service/workout":
