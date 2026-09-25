@@ -32,6 +32,8 @@ knows why not.
 from datetime import date, timedelta
 from typing import NamedTuple
 
+from sqlalchemy import select
+
 from ..models import Session, SessionResult
 
 # How far off plan still counts as "done as planned".
@@ -112,6 +114,51 @@ def classify(session: Session, result: SessionResult | None, today: date) -> str
     if session.date < today:
         return MISSED
     return PLANNED
+
+
+def status_facts(db, session: Session, today: date) -> dict:
+    """The completion half of a session as prompt facts: `status`, plus the actuals, the
+    coach's read, and `actually_done_on` when the work happened on a different day.
+
+    Shared on purpose. Every surface that shows the athlete or the coach an upcoming
+    session has to answer "has this already been done?", and three of them had answered
+    it differently — the debrief followed the run, the brief followed the calendar square,
+    and the weekly review and red-flag path did not ask at all. Sessions get completed
+    EARLY routinely (a scheduled workout selected on the watch and run a day ahead;
+    `link_results` matches by `workoutId` with no date constraint), so the answer is not
+    "is its date in the past". Call this rather than writing a fourth version."""
+    result = db.scalars(
+        select(SessionResult).where(SessionResult.session_id == session.id)
+        .order_by(SessionResult.id)
+    ).first()
+    facts = {"status": classify(session, result, today)}
+    if result is not None and result.completed:
+        facts["actual"] = {
+            "distance_km": result.actual_distance_km,
+            "duration_min": result.actual_duration_min,
+            "avg_hr": result.actual_avg_hr,
+            "read": result.read_summary,
+        }
+        act_date = _activity_date(db, result)
+        if act_date is not None and act_date != session.date:
+            # The day is the point: "you did this on Thursday" rather than a bare "done"
+            # against a session dated Friday.
+            facts["actually_done_on"] = act_date.isoformat()
+    return facts
+
+
+def _activity_date(db, result: SessionResult) -> date | None:
+    """The day the linked activity happened, or None — a session marked done by hand has
+    no activity behind it."""
+    from ..models import Activity
+
+    if result.activity_id is None:
+        return None
+    act = db.get(Activity, result.activity_id)
+    if act is None:
+        return None
+    start = act.start_time_local or act.start_time_utc
+    return start.date() if start is not None else None
 
 
 def _fmt(metric: str, value: float) -> str:

@@ -223,8 +223,42 @@ apart — plus the actuals, the coach's read, and the day it was actually done w
 differs. `done`/`partial` means acknowledge, never announce.
 
 The general shape: **when two surfaces answer the same question about the same data, fixing
-one is a prompt to go and check the other.** Three of these have now been found by the
-athlete rather than by a test, each after the previous one had been fixed in isolation.
+one is a prompt to go and check the other.** Three of these were found by an athlete rather
+than by a test, each after the previous one had been fixed in isolation — so the fourth time
+the question got asked properly, as an audit of every surface that reads a session by date.
+
+That audit found three more, and one of them corrupted data:
+
+- **The weekly review** carried no completion state on `current_upcoming_sessions`, so it
+  re-proposed completed work. Its window starts *tomorrow* — which is exactly the session a
+  day-early athlete has already run when the review fires on a Sunday evening.
+- **The red-flag path** had the same omission over seven days, so it could propose easing a
+  session already finished.
+- **`apply_sessions` guarded only TODAY.** Superseding an already-run *future* session
+  strands its result on the dead row: the ✅ leaves the calendar, `link_results` will not
+  re-match (the activity already has a result), and `missed.py` then reports the run as
+  outstanding. The existing comment described precisely this hazard and implemented it for
+  one day.
+
+The completion half now lives in one place, `completion.status_facts`, called by the brief,
+the weekly review and the red-flag path alike — so a fifth surface cannot invent a fifth
+answer — and `apply_sessions` protects any date from today forward that carries a linked
+result. That guard is deliberately **date-level** rather than per-session: a day whose work
+is done has nothing left to re-plan, and the cost (a same-day gym session cannot be
+restructured once the run is logged) is worth paying to keep a completed result attached to
+something.
+
+### A new install is a different program from an established one
+
+`peak_4wk_avg_km` crashed on any Garmin history shorter than four weeks. The 4-week loop
+never runs, both values stay `None`, and `round(None)` raised a `TypeError` out of
+`garmin_summary` — taking the entire weekly review with it. Completely invisible on an
+account with years of data, and a hard crash on a fresh one.
+
+It was found in the single-athlete app, by a test fixture holding one activity, which is the
+only reason it was found at all. **Bugs that only a new install can hit are the ones this
+repo is most exposed to and least likely to notice**, so a fixture with almost no data in it
+is worth more here than upstream.
 
 **Resolving an approval card** used to replace its text with the outcome, so approving the
 Sunday review *deleted the review* — the reasoning and session list you were asked to judge,

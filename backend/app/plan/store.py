@@ -209,28 +209,40 @@ def apply_sessions(db: DbSession, sessions: list[dict], macro_plan_id: int | Non
     from ..coach.schedule import local_today
     from ..garmin.workouts import PUSH_TYPES
 
-    today = local_today(db)  # their local day — for a zone ahead of UTC, a UTC
-    # 'today' would overnight drop/keep the wrong day and orphan a completed session's result.
-    # Never re-issue the past, and never supersede a session already RUN today —
-    # approving a Sunday-evening review whose block starts that Sunday must not
-    # orphan the morning's completed session (its ✅/result linkage would be
-    # unrecoverable). A today-dated session is kept only while today has no
-    # linked result yet, so a morning red-flag can still rewrite the day ahead.
-    today_done = db.scalar(
-        select(SessionResult.id)
-        .join(Session, SessionResult.session_id == Session.id)
-        .where(Session.date == today).limit(1)
-    ) is not None
+    today = local_today(db)  # the athlete's local day — a UTC 'today' would, in the hours
+    # after midnight, drop/keep the wrong day and orphan a completed session's result.
+    # Never re-issue the past, and never supersede a session already RUN — superseding it
+    # strands its result on the dead row, where nothing can recover the link: the ✅ leaves
+    # the calendar, `link_results` won't re-match (the activity already has a result), and
+    # `missed.py` then reports the run as outstanding.
+    #
+    # This guard covered TODAY only, which missed the case that actually recurs: a
+    # scheduled workout selected on the watch is often run a DAY EARLY, so a FUTURE-dated
+    # session is frequently already complete — and the Sunday weekly review re-proposes the
+    # whole window, tomorrow included. Now any date from today forward that already carries
+    # a linked result is protected.
+    #
+    # Deliberately DATE-level rather than per-session: a day whose work is done has nothing
+    # left to re-plan, and the cost — a same-day gym session can't be restructured once the
+    # run is logged — is worth paying to keep a completed result attached to something.
+    protected = {
+        d for (d,) in db.execute(
+            select(Session.date)
+            .join(SessionResult, SessionResult.session_id == Session.id)
+            .where(Session.date >= today)
+            .distinct()
+        ).all()
+    }
     incoming: list[tuple[date, dict]] = []
     dropped = 0
     for s in sessions:
         d = _pdate(s.get("date"))
-        if d is None or d < today or (d == today and today_done):
+        if d is None or d < today or d in protected:
             dropped += 1
             continue
         incoming.append((d, {**s, "type": _norm_type(s.get("type"))}))
     if dropped:
-        logger.info("apply_sessions: dropped %d past/already-run-today/undated session(s)", dropped)
+        logger.info("apply_sessions: dropped %d past/already-run/undated session(s)", dropped)
     if not incoming:
         return 0
 

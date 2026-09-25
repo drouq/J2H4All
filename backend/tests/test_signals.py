@@ -223,3 +223,13 @@ def test_window_is_seven_nights_ordered(db):
     assert len(nights) == 7
     assert nights[0]["date"] == (today - timedelta(days=6)).isoformat()
     assert nights[-1]["date"] == today.isoformat()
+
+
+def test_peak_block_survives_a_history_shorter_than_four_weeks(db):
+    """A 4-week block needs four weeks. With fewer, the peak loop never runs and both
+    values stay None — and `round(None)` raised a TypeError that took the whole weekly
+    review down. Latent for an established account, a hard crash on a new install."""
+    _run(db, 6001, date.today() - timedelta(days=2), 10.0)
+    g = garmin_summary(db, date.today())
+    assert g["peak_4wk_avg_km"] is None and g["peak_4wk_ending"] is None
+    assert g["recent_4wk_avg_km"] is not None      # the rest of the bundle still builds

@@ -64,6 +64,12 @@ def system_prompt(db, today: date | None = None) -> str:
         "runs when the phase calls for it). Date the proposed sessions "
         "starting TOMORROW at the earliest — never today or past days: today's session (done or not) stands, "
         "and past days are history, not something to re-plan. Be explicit about what changed "
+        "Some of the days you CAN propose may ALREADY BE DONE: check each "
+        "`current_upcoming_sessions` entry's `status` — a session is often run a day early off the "
+        "watch, so TOMORROW is frequently already complete when this review runs on a Sunday "
+        "evening. Copy a `done` or `partial` session through UNCHANGED and leave that day alone; a "
+        "completed day has nothing left to re-plan, and a change there is refused on approval "
+        "rather than applied. "
         "and why. Conservative when recovery is down; don't chase a missed session with a bigger one. "
         "`structural_agreements` are standing agreements with the athlete (e.g. their weekly run-frequency cap, "
         "'[Optional]' marking, gym structure, long-run day) — they are BINDING on every week you propose, "
@@ -94,6 +100,8 @@ def build_facts(db: DbSession, today: date, horizon_days: int = 30) -> dict | No
             Session.date <= today + timedelta(days=horizon_days),
         ).order_by(Session.date)
     ).all()
+    from . import completion
+
     sig = signals.gather(db, today)
     # Token discipline: `current_upcoming_sessions` below carries the full-fidelity
     # planned window, and `context` already has windows/injuries — drop the lower-
@@ -108,12 +116,18 @@ def build_facts(db: DbSession, today: date, horizon_days: int = 30) -> dict | No
         "structural_agreements": sig["context"].pop("preferences", []),
         "signals": sig,
         "macro_phases": mp.phases,
+        # `status` from the shared classifier: the window starts TODAY and a session is
+        # routinely run a day early, so some of it may already be DONE. Without this the
+        # review re-proposed completed work as still to do — and `apply_sessions` now
+        # refuses to supersede an already-run date, so such a change would be silently
+        # dropped on approval.
         "current_upcoming_sessions": [
             {"date": s.date.isoformat(), "type": s.type, "title": s.title,
              "duration_min": s.duration_min, "distance_km": s.distance_km,
              "target_zone": s.target_zone, "target_pace": s.target_pace,
              "purpose": s.purpose, "fueling_note": s.fueling_note,
-             "structure": s.structure}
+             "structure": s.structure,
+             **completion.status_facts(db, s, today)}
             for s in current
         ],
     }

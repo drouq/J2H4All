@@ -58,56 +58,22 @@ def system_prompt(db, today=None) -> str:
 def _session_facts(db: DbSession, s: Session, today: date) -> dict:
     """One of today's sessions, WITH whether it has already been done.
 
-    The completion half matters because a scheduled workout selected on the watch can be
-    run whenever it suits, and `link_results` matches by `workoutId` regardless of date —
-    so today's session may already be complete before the brief fires. Without this the
-    brief reads straight off the calendar square and announces a session as "today's plan"
-    the morning after it was run, while the previous evening's debrief acknowledged it
-    correctly: the debrief follows the run, and the brief followed the square. Running a
-    session a day early is habitual for some athletes, so this bites routinely, not rarely.
-
-    Uses the shared `completion.classify` rather than a local "has a result?" test, so the
-    brief, the calendar glyph and the web Plan panel cannot drift apart."""
-    from ..models import SessionResult
+    The completion half comes from the shared `completion.status_facts`, so the brief, the
+    debrief, the weekly review, the calendar glyph and the web Plan panel cannot drift
+    apart about the same session. It matters here because a session is routinely run a
+    day early off the watch, so today's session is often already complete when the brief
+    fires — before this the brief read straight off the calendar square and announced a
+    75-min Z2 as "today's plan" the morning after he ran it (2026-09-25), hours after the
+    debrief had correctly acknowledged it."""
     from . import completion
 
-    result = db.scalars(
-        select(SessionResult).where(SessionResult.session_id == s.id).order_by(SessionResult.id)
-    ).first()
-    facts = {
+    return {
         "type": s.type, "title": s.title, "purpose": s.purpose,
         "target_zone": s.target_zone, "target_pace": s.target_pace,
         "distance_km": s.distance_km, "duration_min": s.duration_min,
         "fueling_note": s.fueling_note, "structure": s.structure,
-        "status": completion.classify(s, result, today),
+        **completion.status_facts(db, s, today),
     }
-    if result is not None and result.completed:
-        facts["actual"] = {
-            "distance_km": result.actual_distance_km,
-            "duration_min": result.actual_duration_min,
-            "avg_hr": result.actual_avg_hr,
-            "read": result.read_summary,
-        }
-        # When it was run early the DAY is the point — "you did this yesterday" rather than
-        # a bare "done" that leaves them wondering which run it means.
-        act_date = _activity_date(db, result)
-        if act_date is not None and act_date != today:
-            facts["actually_done_on"] = act_date.isoformat()
-    return facts
-
-
-def _activity_date(db: DbSession, result) -> date | None:
-    """The day the linked activity happened, or None — a session marked done by hand has
-    no activity behind it."""
-    from ..models import Activity
-
-    if result.activity_id is None:
-        return None
-    act = db.get(Activity, result.activity_id)
-    if act is None:
-        return None
-    start = act.start_time_local or act.start_time_utc
-    return start.date() if start is not None else None
 
 
 def build_brief(db: DbSession, today: date | None = None) -> str:

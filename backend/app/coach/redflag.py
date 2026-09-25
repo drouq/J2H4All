@@ -231,7 +231,8 @@ def check_and_propose(db: DbSession, today: date | None = None):
             {"date": s.date.isoformat(), "type": s.type, "title": s.title,
              "duration_min": s.duration_min, "distance_km": s.distance_km,
              "target_zone": s.target_zone, "target_pace": s.target_pace, "purpose": s.purpose,
-             "structure": s.structure}
+             "structure": s.structure,
+             **completion.status_facts(db, s, today)}
             for s in upcoming
         ],
     }
@@ -239,7 +240,10 @@ def check_and_propose(db: DbSession, today: date | None = None):
         "You are the coach in J2H4All. Acute red flags have appeared between weekly reviews. Propose a "
         "CONSERVATIVE adjustment to the next few days only — dial back intensity/volume, insert recovery "
         "or rest, protect the athlete. Keep the same dates you were given (you may change a day to rest). "
-        "Be specific and state what changed and why.\n\n"
+        "Be specific and state what changed and why. "
+        "A session whose `status` is `done` or `partial` has ALREADY been completed — one is often "
+        "run a day early — so copy it through UNCHANGED and adjust only what is still `planned`; "
+        "there is nothing to protect them from on a day already finished.\n\n"
         + doctrine.compact_doctrine(db, today)
         + "\n\nRemember: chronic consistency toward race day beats any single session — a few easy days now "
         "protects the block; digging the hole deeper does not."

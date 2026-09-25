@@ -344,3 +344,44 @@ def test_find_planned_session_resolves_type_and_skips_completed(db):
     assert store.find_planned_session(db, d, "rest") is None
     store.mark_session_done(db, gym.id)
     assert store.find_planned_session(db, d, "strength") is None      # already recorded
+
+
+def test_apply_never_supersedes_a_FUTURE_session_already_run(db):
+    """The orphan guard, generalised . He runs a session a day early off the
+    watch, so a future-dated session is often already complete — and the Sunday review
+    re-proposes the whole window, tomorrow included. Superseding it would strand the
+    result on the dead row: the ✅ leaves the calendar, link_results won't re-match, and
+    missed.py then reports the run as outstanding. Previously guarded for TODAY only."""
+    tomorrow = date.today() + timedelta(days=1)
+    done = Session(date=tomorrow, type="easy", title="Easy Aerobic — 75 min Z2", purpose="",
+                   status="planned", created_at=_utcnow(), updated_at=_utcnow())
+    db.add(done)
+    db.flush()
+    db.add(SessionResult(session_id=done.id, activity_id=7777, completed=True,
+                         actual_duration_min=80.6, created_at=_utcnow()))
+    db.commit()
+
+    # A review re-proposing that day plus a later one.
+    n = store.apply_sessions(db, [_sess(tomorrow, "easy", title="Easy — REWRITTEN"),
+                                  _sess(tomorrow + timedelta(days=2), "easy")],
+                             macro_plan_id=None)
+    db.commit()
+    assert n == 1                                   # the already-run day was refused
+    db.refresh(done)
+    assert done.status == "planned"                  # never superseded
+    assert db.query(SessionResult).filter(SessionResult.session_id == done.id).count() == 1
+    assert db.query(Session).filter(Session.title == "Easy — REWRITTEN").count() == 0
+
+
+def test_apply_still_rewrites_a_future_day_with_nothing_logged(db):
+    """The guard must not freeze the plan: a day with no result is still re-plannable."""
+    d = date.today() + timedelta(days=3)
+    old = Session(date=d, type="easy", title="old", purpose="", status="planned",
+                  created_at=_utcnow(), updated_at=_utcnow())
+    db.add(old)
+    db.commit()
+    assert store.apply_sessions(db, [_sess(d, "easy", title="new")], macro_plan_id=None) == 1
+    db.commit()
+    db.refresh(old)
+    assert old.status == "superseded"
+    assert db.query(Session).filter(Session.title == "new", Session.status == "planned").count() == 1

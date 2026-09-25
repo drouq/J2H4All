@@ -100,3 +100,44 @@ def test_the_prompt_is_told_what_status_means(db):
     text = system_prompt(db, _TODAY)
     assert "todays_sessions" in text and "status" in text
     assert "ALREADY" in text and "actually_done_on" in text
+
+
+# ---- the same question, answered the same way everywhere audit --
+# Four surfaces show an upcoming session and each must answer "has this been done?".
+# Three had answered differently: the debrief followed the run, the brief followed the
+# calendar square, and the weekly review and red-flag path never asked. They now share
+# `completion.status_facts`, so the next surface cannot invent a fourth answer.
+
+def test_the_weekly_review_sees_a_session_already_done(db):
+    """The Sunday 23:00 review proposes from TOMORROW — which is exactly the session he
+    would have run a day early that afternoon."""
+    from app.coach import weekly
+    from app.models import Goal, MacroPlan
+    tomorrow = _TODAY + timedelta(days=1)
+    db.add(Goal(format="backyard-ultra", loop_km=6.706, target_laps=24,
+                race_date=_TODAY + timedelta(days=22), status="active", created_at=utcnow()))
+    db.flush()
+    db.add(MacroPlan(goal_id=1, status="active", phases=[], created_at=utcnow()))
+    s = _session(db, tomorrow)
+    _ran(db, s, _TODAY, aid=8101)          # run a day early, today
+
+    facts = weekly.build_facts(db, _TODAY)
+    entry = next(x for x in facts["current_upcoming_sessions"] if x["date"] == tomorrow.isoformat())
+    assert entry["status"] == "done"
+    assert entry["actually_done_on"] == _TODAY.isoformat()
+
+
+def test_the_weekly_prompt_is_told_to_leave_a_done_session_alone(db):
+    from app.coach import weekly
+    text = weekly.system_prompt(db, _TODAY)
+    assert "status" in text and "UNCHANGED" in text
+
+
+def test_the_redflag_prompt_is_told_the_same(db):
+    """A red flag must not propose easing a session is already finished."""
+    import inspect
+
+    from app.coach import redflag
+    src = inspect.getsource(redflag.check_and_propose)
+    assert "status_facts" in src          # the facts carry it
+    assert "UNCHANGED" in src             # and the prompt acts on it

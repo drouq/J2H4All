@@ -208,8 +208,13 @@ def garmin_summary(db: DbSession, today: date, weeks: int = 16) -> dict:
             avg = sum(series[i - 3:i + 1]) / 4
             if peak_4wk_avg_km is None or avg > peak_4wk_avg_km:
                 peak_4wk_avg_km, peak_4wk_ending = avg, mondays[i]
-        peak_4wk_avg_km = round(peak_4wk_avg_km, 1)
-        peak_4wk_ending = _iso_week(peak_4wk_ending)
+        # A 4-week block needs four weeks: with a shorter history the loop above never
+        # runs and both stay None. `round(None)` raised a TypeError that took the whole
+        # weekly review with it — invisible on an established account, a hard crash for
+        # any athlete whose Garmin account holds less than a month, i.e. a NEW INSTALL.
+        if peak_4wk_avg_km is not None:
+            peak_4wk_avg_km = round(peak_4wk_avg_km, 1)
+            peak_4wk_ending = _iso_week(peak_4wk_ending)
         # Recent average = last 4 FULL weeks, zero-filled, excluding the
         # in-progress week — the honest "what is they actually running right now".
         full = [v for m, v in zip(mondays, series) if m < this_monday]
