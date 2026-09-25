@@ -19,9 +19,15 @@ logger = logging.getLogger(__name__)
 def system_prompt(db, today=None) -> str:
     return (
         "You are the coach in J2H4All. Write the athlete's morning brief: 3-5 short lines, warm but concise, no "
-        "fluff. Cover today's planned session (what and why), how their recovery looks (Garmin Training "
+        "fluff. Cover today's session (what and why), how their recovery looks (Garmin Training "
         "Readiness score/level if present, plus HRV/resting-HR/sleep trend), and at most one actionable "
         "nudge (fueling, pacing, or 'ease off if X'). If recovery is down, say so plainly.\n\n"
+        "EACH of `todays_sessions` carries a `status`. When it is `done` or `partial` the athlete has "
+        "ALREADY completed it — a scheduled workout is often run a day early off the watch — so "
+        "ACKNOWLEDGE it (naming `actually_done_on` when it says they did it on another day) and NEVER "
+        "announce it as today's plan or tell them to go and do it. If everything today is already "
+        "done, say the day's work is in the bank and brief on recovery instead. Only `planned` is "
+        "still ahead of them.\n\n"
         + doctrine.compact_doctrine(db, today)
         + "\n\nWhen it's natural, frame the session's 'why' in doctrine terms — what today builds toward "
         "THIS athlete's race, using the demands named in the doctrine above rather than generic "
@@ -49,6 +55,61 @@ def system_prompt(db, today=None) -> str:
     )
 
 
+def _session_facts(db: DbSession, s: Session, today: date) -> dict:
+    """One of today's sessions, WITH whether it has already been done.
+
+    The completion half matters because a scheduled workout selected on the watch can be
+    run whenever it suits, and `link_results` matches by `workoutId` regardless of date —
+    so today's session may already be complete before the brief fires. Without this the
+    brief reads straight off the calendar square and announces a session as "today's plan"
+    the morning after it was run, while the previous evening's debrief acknowledged it
+    correctly: the debrief follows the run, and the brief followed the square. Running a
+    session a day early is habitual for some athletes, so this bites routinely, not rarely.
+
+    Uses the shared `completion.classify` rather than a local "has a result?" test, so the
+    brief, the calendar glyph and the web Plan panel cannot drift apart."""
+    from ..models import SessionResult
+    from . import completion
+
+    result = db.scalars(
+        select(SessionResult).where(SessionResult.session_id == s.id).order_by(SessionResult.id)
+    ).first()
+    facts = {
+        "type": s.type, "title": s.title, "purpose": s.purpose,
+        "target_zone": s.target_zone, "target_pace": s.target_pace,
+        "distance_km": s.distance_km, "duration_min": s.duration_min,
+        "fueling_note": s.fueling_note, "structure": s.structure,
+        "status": completion.classify(s, result, today),
+    }
+    if result is not None and result.completed:
+        facts["actual"] = {
+            "distance_km": result.actual_distance_km,
+            "duration_min": result.actual_duration_min,
+            "avg_hr": result.actual_avg_hr,
+            "read": result.read_summary,
+        }
+        # When it was run early the DAY is the point — "you did this yesterday" rather than
+        # a bare "done" that leaves them wondering which run it means.
+        act_date = _activity_date(db, result)
+        if act_date is not None and act_date != today:
+            facts["actually_done_on"] = act_date.isoformat()
+    return facts
+
+
+def _activity_date(db: DbSession, result) -> date | None:
+    """The day the linked activity happened, or None — a session marked done by hand has
+    no activity behind it."""
+    from ..models import Activity
+
+    if result.activity_id is None:
+        return None
+    act = db.get(Activity, result.activity_id)
+    if act is None:
+        return None
+    start = act.start_time_local or act.start_time_utc
+    return start.date() if start is not None else None
+
+
 def build_brief(db: DbSession, today: date | None = None) -> str:
     if today is None:
         from .schedule import local_today
@@ -60,13 +121,7 @@ def build_brief(db: DbSession, today: date | None = None) -> str:
     g = garmin_summary(db, today)
     facts = {
         "today": today.isoformat(),
-        "todays_sessions": [
-            {"type": s.type, "title": s.title, "purpose": s.purpose,
-             "target_zone": s.target_zone, "target_pace": s.target_pace,
-             "distance_km": s.distance_km, "duration_min": s.duration_min,
-             "fueling_note": s.fueling_note, "structure": s.structure}
-            for s in todays
-        ],
+        "todays_sessions": [_session_facts(db, s, today) for s in todays],
         "recovery": signals.recovery_baseline(db, today),
         "recovery_14d": g["recovery_14d"],  # carries avg_sleep_h — the prompt asks for a sleep trend
         # Per-night bed→wake windows: a single short night is INVISIBLE in the 14-day

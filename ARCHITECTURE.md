@@ -211,6 +211,21 @@ date means going silent on exactly the evenings training happened, and speaking 
 planned day when nothing did. When the two differ the card names the planned day, because
 "you did Friday's run" is the useful sentence.
 
+The **morning brief** had the mirror of that bug and it is worth naming separately, because
+the same question asked from the other side got a different answer. The brief selected
+today's work as `status == "planned" AND date == today` and never asked whether those
+sessions already carried a result — so the morning after a session was run early, it
+announced that session as today's plan, hours after the debrief had correctly acknowledged
+it. **The debrief followed the run; the brief followed the calendar square.** Each of
+today's sessions now carries a `status` from the shared `completion.classify` — not a local
+"has a result?" test, so the brief, the calendar glyph and the web Plan panel cannot drift
+apart — plus the actuals, the coach's read, and the day it was actually done when that
+differs. `done`/`partial` means acknowledge, never announce.
+
+The general shape: **when two surfaces answer the same question about the same data, fixing
+one is a prompt to go and check the other.** Three of these have now been found by the
+athlete rather than by a test, each after the previous one had been fixed in isolation.
+
 **Resolving an approval card** used to replace its text with the outcome, so approving the
 Sunday review *deleted the review* — the reasoning and session list you were asked to judge,
 gone at the moment you judged it. Now the buttons are stripped (an `editMessageReplyMarkup`,
