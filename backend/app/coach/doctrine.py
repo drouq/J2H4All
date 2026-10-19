@@ -56,6 +56,10 @@ _FALLBACK_TARGET_LAPS = 24
 _FALLBACK_HORIZON_DAYS = 182       # ~6 months out: a plausible, obviously-unset horizon
 _FALLBACK_RACES: list[dict] = []   # no secondary races until the athlete adds them
 
+# How far ahead of the earliest candidate date an undecided race date has to be chosen:
+# an A-race taper is ~2 weeks, so past this point the early date can't be prepared for.
+DECISION_LEAD_DAYS = 14
+
 
 def _default_today(db) -> date:
     """The 'today' to use when a caller doesn't pass one — the athlete's LOCAL day, not
@@ -78,17 +82,18 @@ def _facts(db, today: date) -> dict:
         "format": goal.format, "race_date": goal.race_date,
         "loop_km": goal.loop_km, "target_laps": goal.target_laps,
         "distance_km": goal.distance_km, "elevation_gain_m": goal.elevation_gain_m,
-        "target_time": goal.target_time,
+        "target_time": goal.target_time, "date_window_start": goal.date_window_start,
         "floor_note": goal.floor_note, "stretch_note": goal.stretch_note,
     } if goal else {
         "format": _FALLBACK_FORMAT,
         "race_date": today + timedelta(days=_FALLBACK_HORIZON_DAYS),
         "loop_km": _FALLBACK_LOOP_KM, "target_laps": _FALLBACK_TARGET_LAPS,
         "distance_km": None, "elevation_gain_m": None, "target_time": None,
-        "floor_note": None, "stretch_note": None,
+        "date_window_start": None, "floor_note": None, "stretch_note": None,
     }
     rs = [{"name": r.name, "date": r.date, "distance_km": r.distance_km,
-           "type": r.type, "priority": r.priority} for r in races] or list(_FALLBACK_RACES)
+           "type": r.type, "priority": r.priority, "note": r.note}
+          for r in races] or list(_FALLBACK_RACES)
     # A race that has happened is history, not something to taper around — once a
     # B-race is run, prompts must stop planning its mini-taper/rebound.
     rs = [r for r in rs if r["date"] >= today]
@@ -131,6 +136,48 @@ def identity_line(db) -> str:
     return "".join(bits)
 
 
+def date_window_line(g: dict, today: date) -> str | None:
+    """While the date is undecided: the window, the anchor the plan uses, and the
+    point past which the early date can no longer be prepared for."""
+    lo = g.get("date_window_start")
+    if not lo:
+        return None
+    hi = g["race_date"]
+    decide_by = lo - timedelta(days=DECISION_LEAD_DAYS)
+    when = ("that point has PASSED — if they still haven't chosen, the early date is effectively off; "
+            "say so plainly" if decide_by < today else f"{(decide_by - today).days} days from today")
+    return (
+        f"DATE NOT YET FIXED: the A-race falls somewhere between {lo.isoformat()} and {hi.isoformat()}. "
+        f"Plan to {hi.isoformat()} as the anchor (every countdown here counts to it), but until they "
+        "choose, keep the EARLY date reachable: what both options share goes first, and nothing in it "
+        f"may leave them unable to taper for {lo.isoformat()}. The two plans fork when a taper for the "
+        f"early date would have to start — around {decide_by.isoformat()} ({when}). Remind them of that "
+        "fork as it approaches; once they give a date, the plan is re-anchored to it."
+    )
+
+
+def _secondary_race_line(r: dict, g: dict, today: date) -> str:
+    gap_wk = (g["race_date"] - r["date"]).days / 7
+    anchor = " anchor date" if g.get("date_window_start") else ""
+    line = (
+        f"Secondary race ({r['priority']}): {r['name']}, {r['distance_km']:g} km {r['type'] or 'race'}, "
+        f"{r['date'].isoformat()} ({(r['date'] - today).days} days away, ~{gap_wk:.1f} weeks before the "
+        f"A-race{anchor})."
+    )
+    lo = g.get("date_window_start")
+    if lo and lo <= r["date"] <= g["race_date"]:
+        line += (f" It falls INSIDE the A-race date window: if they pick a date before {r['date'].isoformat()}, "
+                 "this race comes AFTER the A-race and is run on recovering legs, as a jog — plan both cases.")
+    # The athlete's own notes on the race (what they want from it, travel, how much
+    # they care). These were stored and shown on the web, but never reached a prompt.
+    if r.get("note"):
+        line += f" Their notes on it: {r['note']}"
+    return line + (
+        " It is a sharpener with a recovery cost: mini-taper (3-5 days), never a full taper, then a deliberate "
+        "rebound before the final race-specific block. Reason about the interplay; never treat races "
+        "independently.")
+
+
 def athlete_block(db, today: date | None = None) -> str:
     f = _facts(db, today or _default_today(db))
     g, today = f["goal"], f["today"]
@@ -143,6 +190,11 @@ def athlete_block(db, today: date | None = None) -> str:
         # time, a trail ultra's is distance and vertical, a backyard's is laps on the
         # hour. One template would have to omit whichever fields don't fit.
         fmt.goal_line(g, today, days),
+    ]
+    window = date_window_line(g, today)
+    if window:
+        lines.append(window)
+    lines += [
         # Everything personal — age, history, physiology quirks, diet, climate, crew,
         # race location, prior attempts at this race — reaches the coach through the
         # CONTEXT STORE (coaching notes, preferences, injuries, bloods, dietary
@@ -187,13 +239,7 @@ def athlete_block(db, today: date | None = None) -> str:
             f"stretch: {g['stretch_note']}" if g.get("stretch_note") else None) if x]
         lines.append("Goal notes — " + "; ".join(goals) + ".")
     for r in f["races"]:
-        gap_wk = (g["race_date"] - r["date"]).days / 7
-        lines.append(
-            f"Secondary race ({r['priority']}): {r['name']}, {r['distance_km']:g} km {r['type'] or 'race'}, "
-            f"{r['date'].isoformat()} ({(r['date'] - today).days} days away, ~{gap_wk:.1f} weeks before the A-race) "
-            "— a sharpener with a recovery cost: mini-taper (3-5 days), never a full taper, then a deliberate "
-            "rebound before the final race-specific block. Reason about the interplay; never treat races independently."
-        )
+        lines.append(_secondary_race_line(r, g, today))
     lines.append(
         "TRAINING BACKGROUND: read it from the DATA, not from assumption. The full-history volume (monthly "
         "arc, peak 4-week block) and the training-history coaching_notes tell you what this body has already "
@@ -339,6 +385,11 @@ def compact_doctrine(db, today: date | None = None) -> str:
     g = f["goal"]
     fmt = formats.get(g.get("format"))
     days = (g["race_date"] - f["today"]).days
+    window = ""
+    if g.get("date_window_start"):
+        window = (f" DATE NOT FIXED: between {g['date_window_start'].isoformat()} and "
+                  f"{g['race_date'].isoformat()}; the later date is the planning anchor, keep the early one "
+                  "reachable until they decide.")
     race_bits = "; ".join(
         f"{r['name']} {r['distance_km']:g} km ({r['priority']}-race) {r['date'].isoformat()} — sharpener, mini-taper only"
         for r in f["races"]
@@ -346,7 +397,7 @@ def compact_doctrine(db, today: date | None = None) -> str:
     return (
         f"{identity_line(db)}\n"
         f"COACHING DOCTRINE ({fmt.label}, compact):\n"
-        f"- A-race {g['race_date'].isoformat()} ({days} days out): {fmt.compact}"
+        f"- A-race {g['race_date'].isoformat()} ({days} days out): {fmt.compact}{window}"
         f"{' ' + race_bits + '.' if race_bits else ''}\n"
         "- Training currency: time-on-feet, ~80/20 easy; race fueling rehearsed inside long runs (the gut is "
         "trainable); volume ramps ~10%/week max with down-weeks; never volume and intensity in the same week; "

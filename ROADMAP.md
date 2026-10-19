@@ -44,6 +44,15 @@ never raises. `Goal` gained `distance_km`, `elevation_gain_m` and `target_time`
 prompt takes its phase vocabulary from the format, so a marathon build is no longer asked
 for a "backyard-specific" block.
 
+**Undecided race dates** (migration 0017). Athletes often know roughly when the race is
+before they know the day: a ballot, a choice between two events, a race they organise
+themselves. `Goal.date_window_start` holds the earliest candidate while `race_date` stays
+the planning anchor (the latest), so every countdown keeps working. The doctrine names
+the window and the **fork**, `DECISION_LEAD_DAYS` (a taper's length) before the earliest
+date, after which the early option can't be prepared for. It also flags a secondary race
+that falls inside the window, since it lands either side of the A-race. Setup has an
+optional "earliest possible date" field; saving it blank clears the window.
+
 Tests lock the property that matters in both directions: backyard concepts must not leak
 into a marathon, and marathon concepts must not leak into a backyard.
 

@@ -278,6 +278,8 @@ def setup_status(user: str = Depends(current_user), db: Session = Depends(get_db
 class GoalIn(BaseModel):
     format: str | None = None
     race_date: str | None = None
+    # Earliest candidate while the date is undecided; "" clears it (date fixed).
+    date_window_start: str | None = None
     loop_km: float | None = None
     target_laps: int | None = None
     distance_km: float | None = None

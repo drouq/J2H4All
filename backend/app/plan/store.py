@@ -100,8 +100,8 @@ def ensure_seed(db: DbSession) -> None:
 
 # Goal columns an athlete may set. `status` and `created_at` are ours; `format` is
 # validated against the doctrine registry rather than taken as free text.
-GOAL_FIELDS = ("format", "race_date", "loop_km", "target_laps", "distance_km",
-               "elevation_gain_m", "target_time", "floor_note", "stretch_note")
+GOAL_FIELDS = ("format", "race_date", "date_window_start", "loop_km", "target_laps",
+               "distance_km", "elevation_gain_m", "target_time", "floor_note", "stretch_note")
 
 
 def is_placeholder(goal) -> bool:
@@ -125,6 +125,11 @@ def set_goal(db: DbSession, **fields) -> Goal:
     ensure_seed(db)
     goal = db.scalar(select(Goal).where(Goal.status == "active").limit(1))
     real = {k: v for k, v in fields.items() if v is not None}
+    # Skip-nulls means None can't clear a field, but deciding the date must clear the
+    # window — so an empty string is the explicit "date is fixed now".
+    clear_window = real.get("date_window_start") == ""
+    if clear_window:
+        del real["date_window_start"]
     if "format" in real:
         # Normalize through the registry so "marathon" becomes "road-marathon" and a
         # typo lands on `generic` rather than silently coaching the wrong race.
@@ -134,9 +139,22 @@ def set_goal(db: DbSession, **fields) -> Goal:
         if parsed is None:
             raise ValueError(f"race_date is not a date: {real['race_date']!r}")
         real["race_date"] = parsed
+    if "date_window_start" in real:
+        parsed = _pdate(real["date_window_start"])
+        if parsed is None:
+            raise ValueError(f"date_window_start is not a date: {real['date_window_start']!r}")
+        real["date_window_start"] = parsed
+    # Validated against the RESULTING goal, before anything is written: the anchor is
+    # the LATEST candidate, so a window starting on or after it is a typo, and planning
+    # to it would put the taper before the "earliest" date.
+    window = None if clear_window else real.get("date_window_start", goal.date_window_start)
+    if window is not None and window >= real.get("race_date", goal.race_date):
+        raise ValueError("date_window_start must be before race_date (the latest candidate date)")
     changing_format = "format" in real and real["format"] != goal.format
     for key, value in real.items():
         setattr(goal, key, value)
+    if clear_window:
+        goal.date_window_start = None
     # Changing format must CLEAR the fields that belonged to the old one. Skip-nulls
     # is right for editing within a format, but across formats it strands values that
     # are meaningless in the new one — a backyard's target_laps survived a switch to
@@ -167,6 +185,7 @@ def goal_view(db: DbSession, today: date | None = None) -> dict:
             "target_time": goal.target_time,
             "race_date": goal.race_date.isoformat(),
             "days_to_race": (goal.race_date - today).days,
+            "date_window_start": goal.date_window_start.isoformat() if goal.date_window_start else None,
             "floor_note": goal.floor_note, "stretch_note": goal.stretch_note,
         } if goal else None,
         "secondary_races": [

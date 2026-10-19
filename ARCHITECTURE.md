@@ -445,6 +445,31 @@ and because the calendar token resolves from the *database*, it rewrote the prod
 calendar daily from a stale plan. There is now a hard guard: the post-sync calendar
 reconcile no-ops unless the app is running in production.
 
+### An LLM output that replaces a set must not be able to delete by omission
+
+Approving a sessions proposal supersedes the stored plan across the whole date span of
+its payload. That is right for a full generation, which uses it to clear stale sessions.
+It is a trap for the Edit redraft (`revise.revise_proposal`). In the reference
+deployment a 31-session weekly review, edited twice, came back from the second edit as
+only the 2 sessions whose wording changed. Approving it deleted the other 29, including
+the block the card's own text said it had added. Nothing alerted, because nothing
+failed. The coaching-chat tool had always said "emit the COMPLETE set"; the redraft
+prompt never did.
+
+The fix works on both levels. The prompt now states that its output replaces the
+proposal and that removing a session means a rest day, not leaving it out. Behind the
+prompt, `revise.carry_through` restores any original date the redraft doesn't cover.
+**A prompt is a request; a structural guard is a guarantee.** Wherever a model's output
+replaces a collection, guard against omission in code.
+
+### A field that is stored and shown is not a field the coach reads
+
+`SecondaryRace.note` was captured, stored and rendered on the web plan page, but the
+doctrine never put it in a prompt. So everything an athlete wrote about a B-race (how
+much they care about it, travel around it, whether it is a tune-up) was invisible to the
+coach planning around it. It reaches the athlete block now. When adding a field, check
+that it reaches the prompt as well as the page.
+
 ---
 
 ## 5. Deliberately out of scope

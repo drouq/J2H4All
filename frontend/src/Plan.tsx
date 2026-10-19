@@ -208,9 +208,11 @@ export default function PlanPanel() {
             {g.distance_km ? ` — ${g.distance_km} km` : ""}
             {g.elevation_gain_m ? ` / ${g.elevation_gain_m} m` : ""}
             {g.target_time ? ` — target ${g.target_time}` : ""}
-            {`, ${g.race_date}`}
+            {g.date_window_start
+              ? `, ${g.date_window_start} to ${g.race_date} (date not fixed yet)`
+              : `, ${g.race_date}`}
           </span>
-          {goal!.secondary_races.map((r) => (
+          {goal!.secondary_races.filter((r) => r.days_to_race >= 0).map((r) => (
             <div key={r.name} className="muted small">
               {r.name}: {r.distance_km} km {r.type} · {r.date} ({r.days_to_race}d, {r.priority}-race)
             </div>

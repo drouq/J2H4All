@@ -119,6 +119,9 @@ export type GoalView = {
     target_time: string | null;
     race_date: string;
     days_to_race: number;
+    // Set only while the date is undecided: the earliest candidate. race_date is then
+    // the planning anchor (the latest candidate), not a fixed day.
+    date_window_start: string | null;
     floor_note: string | null;
     stretch_note: string | null;
   } | null;
@@ -377,6 +380,8 @@ export type SetupStatus = {
 export type GoalIn = {
   format?: string;
   race_date?: string;
+  // Earliest candidate while the date is undecided; "" clears it (date fixed).
+  date_window_start?: string;
   loop_km?: number | null;
   target_laps?: number | null;
   distance_km?: number | null;

@@ -306,6 +306,10 @@ class Goal(Base):
     # 24h" is a more honest statement of a goal than a rounded integer.
     target_time: Mapped[str | None] = mapped_column(String(32))
     race_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # Set only while the date is undecided: the EARLIEST candidate. race_date is then
+    # the planning anchor (the latest candidate), so countdowns keep working; NULL =
+    # the date is fixed. The doctrine plans so the early date stays reachable.
+    date_window_start: Mapped[date | None] = mapped_column(Date)
     race_timezone: Mapped[str | None] = mapped_column(String(64))  # anchor for taper countdown
     floor_note: Mapped[str | None] = mapped_column(Text)
     stretch_note: Mapped[str | None] = mapped_column(Text)

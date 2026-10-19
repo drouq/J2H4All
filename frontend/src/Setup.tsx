@@ -98,6 +98,7 @@ export default function SetupPanel() {
         setForm((f) => ({
           format: f.format ?? g.goal!.format ?? "",
           race_date: f.race_date ?? g.goal!.race_date ?? "",
+          date_window_start: f.date_window_start ?? (g.goal!.date_window_start ?? ""),
           loop_km: f.loop_km ?? (g.goal!.loop_km?.toString() ?? ""),
           target_laps: f.target_laps ?? (g.goal!.target_laps?.toString() ?? ""),
           distance_km: f.distance_km ?? (g.goal!.distance_km?.toString() ?? ""),
@@ -130,7 +131,13 @@ export default function SetupPanel() {
 
   const onSaveGoal = () =>
     run(async () => {
-      const payload: GoalIn = { format: form.format || undefined, race_date: form.race_date || undefined };
+      // An empty "earliest date" is sent as "" on purpose: it clears the window once
+      // the date is decided (skip-nulls would otherwise leave it in place).
+      const payload: GoalIn = {
+        format: form.format || undefined,
+        race_date: form.race_date || undefined,
+        date_window_start: form.date_window_start ?? "",
+      };
       const shown = FIELDS[form.format] ?? [];
       if (shown.includes("loop")) payload.loop_km = num(form.loop_km ?? "");
       if (shown.includes("laps")) payload.target_laps = num(form.target_laps ?? "");
@@ -205,6 +212,17 @@ export default function SetupPanel() {
           <input type="date" value={form.race_date ?? ""}
                  onChange={(e) => setForm({ ...form, race_date: e.target.value })} />
         </label>
+        <label>
+          Earliest possible date (only if the date isn't fixed yet)
+          <input type="date" value={form.date_window_start ?? ""}
+                 onChange={(e) => setForm({ ...form, date_window_start: e.target.value })} />
+        </label>
+        {form.date_window_start && (
+          <p className="muted small">
+            The race date above is then the latest candidate. The coach plans to it but keeps the
+            earliest date reachable, and reminds you when you need to decide.
+          </p>
+        )}
         {shown.includes("loop") && (
           <label>Loop distance (km)
             <input value={form.loop_km ?? ""} onChange={(e) => setForm({ ...form, loop_km: e.target.value })} /></label>
