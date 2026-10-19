@@ -77,6 +77,30 @@ def pop_pending_edit(db: DbSession) -> int | None:
     return pid
 
 
+def carry_through(original: list[dict], revised: list[dict]) -> tuple[list[dict], list[str]]:
+    """Restore every original session the redraft left out, by date.
+
+    The redraft REPLACES the proposal, and approving it supersedes the stored plan
+    across the whole date span it covers, so a redraft that returns only the
+    sessions it touched silently deletes everything in between. In the reference
+    deployment a 31-session weekly review, edited twice, came back from the second
+    edit as just the 2 sessions whose wording changed; approving it wiped 29
+    sessions, including the whole block the card's own text said it had put in, and
+    nothing alerted because nothing failed.
+
+    The prompt demands the complete set, but a prompt is not a guarantee. This is
+    the guarantee: a date present in the original and absent from the redraft keeps
+    its original session(s). Removing a session is expressed as a rest day on that
+    date (the prompt says so), so carrying an omitted date through never resurrects
+    something the athlete asked to drop. Returns (merged sessions sorted by date,
+    the dates carried through)."""
+    covered = {str(s.get("date"))[:10] for s in revised}
+    kept = [s for s in original if str(s.get("date"))[:10] not in covered]
+    carried = sorted({str(s.get("date"))[:10] for s in kept})
+    merged = sorted([*revised, *kept], key=lambda s: str(s.get("date"))[:10])
+    return merged, carried
+
+
 def revise_proposal(db: DbSession, proposal_id: int, instruction: str):
     """Redraft a pending sessions-style proposal per the instruction. Returns
     (new_proposal, summary) or None if it can't be revised."""
@@ -96,7 +120,12 @@ def revise_proposal(db: DbSession, proposal_id: int, instruction: str):
             task="red_flag",  # light re-draft, Sonnet tier
             system=("You are the coach in J2H4All. Revise these proposed sessions per the athlete's "
                     "instruction. Keep everything else sensible and consistent with the doctrine below. "
-                    "Every session keeps a purpose.\n\n" + doctrine.compact_doctrine(db, today)),
+                    "Every session keeps a purpose.\n\n"
+                    "Return the COMPLETE set: every session in current_sessions, with the change "
+                    "applied and every unchanged session copied through verbatim. Your output replaces "
+                    "the whole proposal, so a session you leave out is a session deleted from their "
+                    "plan. To remove a session, put a rest day on that date — never just omit it.\n\n"
+                    + doctrine.compact_doctrine(db, today)),
             content="Revise per the instruction (JSON):\n" + json.dumps(facts, default=str),
             tool_name="record_revision", tool_schema=REVISE_SCHEMA,
             tool_description="Record the revised sessions.", max_tokens=8000,
@@ -119,6 +148,10 @@ def revise_proposal(db: DbSession, proposal_id: int, instruction: str):
     # window where a create() failure left the user with NO proposal — and marked the old
     # one "rejected" rather than the semantically-correct "superseded".)
     summary = out.get("summary", "Revised proposal.")
-    payload = {"sessions": out.get("sessions", []), "change_note": out.get("change_note")}
+    sessions, carried = carry_through(original, out.get("sessions", []))
+    if carried:
+        logger.warning("Proposal revision omitted %d date(s); carried the originals through: %s",
+                       len(carried), ", ".join(carried))
+    payload = {"sessions": sessions, "change_note": out.get("change_note")}
     new_p = plan_proposals.create(db, kind="sessions", summary=summary, payload=payload, origin=p.origin)
     return new_p, summary
