@@ -28,7 +28,9 @@ their own.
 marathon and half. Set `Goal.format` and the coach reasons about *your* race — a
 marathoner gets goal-pace and threshold doctrine, a trail runner gets descent
 conditioning and cutoffs. An unrecognised format falls back to sound general endurance
-coaching and asks what the race actually is, rather than guessing.
+coaching and asks what the race actually is, rather than guessing. **The date doesn't have
+to be fixed yet:** give an earliest and a latest candidate and the coach plans to the later
+one while keeping the earlier one reachable, and tells you when you have to decide.
 
 Two honest caveats:
 
@@ -57,8 +59,8 @@ The software comes with no warranty of any kind — see [LICENSE](LICENSE).
 |---|---|
 | **Garmin sync** | Full history import + daily incremental. Activities, HR zones, sleep, HRV, resting HR, skin temp, respiration, VO2max, training load. Per-run weather and per-second durability streams (aerobic decoupling, HR drift, pace consistency). |
 | **Context store** | Talk to it — "ferritin came back at 28", "I'm in London for two weeks", "my calf is sore". Claude extracts to typed fields, confirms, then writes. PDF blood-panel parsing. |
-| **Plan pipeline** | A periodized macro plan to race day plus a rolling ~30-day block of daily sessions, each carrying its "why". Duration-first, not distance-first. |
-| **Approval gate** | Nothing side-effectful happens without your explicit tap. Every calendar write, watch push and plan revision is *proposed* first. |
+| **Plan pipeline** | A periodized macro plan to race day plus a rolling ~30-day block of daily sessions, each carrying its "why". Duration-first, not distance-first. Secondary races are planned around the A-race, using your own notes on each one. |
+| **Approval gate** | Nothing side-effectful happens without your explicit tap. Every calendar write, watch push and plan revision is *proposed* first. Tap Edit on a card and say what to change: the coach redrafts it, and a redraft can't silently drop the sessions it didn't touch. |
 | **Calendar + watch** | A dedicated Google Calendar, one event per session, with ✅ / ⚠️ / ❌ completion marking. Approved runs also become scheduled Garmin structured workouts. |
 | **Adaptation loop** | Morning brief (recovery read incl. per-night bed→wake sleep windows, so one short night is seen, not averaged away; a session you already did is acknowledged, not announced), evening debrief (feel + life factors, one tap each) opening with the session you actually did and the coach's read of it, Sunday weekly review that re-plans the next 30 days, and red-flag pings on illness/fatigue signals. Approval cards keep their text when you answer them — the buttons go, the outcome arrives as a reply. |
 | **Setup** | A first-run panel: what's configured, what's missing, what to do about it. Sets your race, and takes a pasted Garmin token so you never edit a host environment variable. Refuses to draft a plan against a race you haven't set. |

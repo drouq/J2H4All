@@ -83,6 +83,13 @@ and it is the part that has been tuned against real data. `coach/formats/` holds
 that genuinely differs: what the race demands, how it is executed, and the handful of
 training sessions the format requires. `Goal.format` selects one.
 
+The goal row also carries an optional `date_window_start` for a race whose date is still
+open. `race_date` stays the planning anchor (the latest candidate), so every countdown
+works unchanged. The athlete block adds the window, the **fork** (`DECISION_LEAD_DAYS`
+before the earliest date, after which it can't be prepared for), and a warning for any
+secondary race that lands inside the window. Each secondary race's own `note` is
+rendered with it.
+
 Why layered rather than one doctrine per format: writing four standalone doctrines is how
 you get four mediocre coaches, because the shared reasoning gets re-derived badly and
 drifts apart. Formats are a **fixed registry, not free text** — a rule that must hold on

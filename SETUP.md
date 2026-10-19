@@ -192,7 +192,9 @@ enough if you follow the polling rule in §2.
 5. **Set your real race** in the Setup panel — format, date, and the fields that format
    uses. A fresh install carries a clearly-labelled placeholder, and the app **refuses to
    draft a plan** until you replace it: the whole plan is periodized backwards from your
-   race date, and a plan built for a placeholder looks entirely normal.
+   race date, and a plan built for a placeholder looks entirely normal. If the date isn't
+   decided yet, put the latest candidate as the race date and the earliest under
+   "Earliest possible date"; clear that field once you know the day, then re-draft.
 6. Draft your first plan from the web app, and approve it.
 
 ## Troubleshooting
