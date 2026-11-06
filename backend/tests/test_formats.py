@@ -186,3 +186,27 @@ def test_context_extraction_assumes_no_race_format(db):
 
     text = extract._system(_d(2027, 1, 1), "Europe/London")
     assert "backyard" not in text and "ultra-runner" not in text
+
+
+# --------------------------------------------------------------- the training currency
+
+def test_a_marathon_is_not_told_that_pace_is_an_output(db):
+    """The shared training block used to open with "time-on-feet is the currency ...
+    distance and pace are outputs" for every format, so a time-goal marathoner got
+    that line and then a format block built entirely around goal pace."""
+    _goal(db, "road-marathon", distance_km=42.195, target_time="sub-4:00")
+    full = doctrine.full_doctrine(db)
+    assert "Time-on-feet is the currency" not in full
+    assert "Goal pace is the currency" in full
+    assert "Be honest about the target" in full
+    compact = doctrine.compact_doctrine(db)
+    assert "Training currency: goal pace" in compact
+    assert "Training currency: time-on-feet" not in compact
+
+
+@pytest.mark.parametrize("fmt", ["backyard-ultra", "trail-ultra", "road-ultra", "generic"])
+def test_other_formats_keep_the_endurance_currency(db, fmt):
+    _goal(db, fmt)
+    assert "Time-on-feet is the currency" in doctrine.full_doctrine(db)
+    assert "Training currency: time-on-feet" in doctrine.compact_doctrine(db)
+    assert "Goal pace is the currency" not in doctrine.full_doctrine(db)

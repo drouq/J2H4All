@@ -60,6 +60,14 @@ class Format:
     execution: str
     # One sentence for the cheap Sonnet surfaces, which can't carry the full text.
     compact: str
+    # The format's training CURRENCY — the first line of the shared training block,
+    # and its compact twin. None keeps the endurance default (time-on-feet, distance
+    # and pace as outputs), which is right for every ultra. A paced race overrides
+    # it: telling a time-goal marathoner that "pace is an output" contradicts the very
+    # format block printed after it. In the reference deployment, the first
+    # time-goal marathon got exactly that contradiction.
+    engine: str | None = None
+    compact_training: str | None = None
 
 
 def _n(value, suffix: str = "", fmt: str = "g") -> str:

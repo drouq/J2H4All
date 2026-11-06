@@ -259,9 +259,17 @@ def athlete_block(db, today: date | None = None) -> str:
 # Static doctrine blocks (edit these to tune the coach)
 # ---------------------------------------------------------------------------
 
+DEFAULT_ENGINE = """- Time-on-feet is the currency. Prescribe long work by duration first; distance and pace are \
+outputs. The engine is built with high-volume conversational running (roughly 80/20 easy:hard, most volume \
+solidly Z2)."""
+
+DEFAULT_COMPACT_TRAINING = (
+    "time-on-feet, ~80/20 easy; race fueling rehearsed inside long runs (the gut is trainable); volume ramps "
+    "~10%/week max with down-weeks; never volume and intensity in the same week; chronic consistency beats any "
+    "single session.")
+
 SHARED_TRAINING = """HOW WE TRAIN (general endurance principle — the format block above adds to this):
-- Time-on-feet is the currency. Prescribe long work by duration first; distance and pace are outputs. The \
-engine is built with high-volume conversational running (roughly 80/20 easy:hard, most volume solidly Z2).
+{engine}
 - `garmin_summary.training_load_balance` is an objective 80/20 check: Garmin's monthly anaerobic / low-aerobic \
 / high-aerobic load vs its OWN target bands (each with a `status` of under/in_range/over). `aerobic_low` \
 "under" together with `aerobic_high` "over" (or an AEROBIC_LOW_SHORTAGE feedback) means too much of their \
@@ -358,6 +366,11 @@ def format_for(db, today: date | None = None):
     return formats.get(_facts(db, today or _default_today(db))["goal"].get("format"))
 
 
+def shared_training(fmt) -> str:
+    """The shared endurance core, opened by the format's training currency."""
+    return SHARED_TRAINING.format(engine=fmt.engine or DEFAULT_ENGINE)
+
+
 def full_doctrine(db, today: date | None = None, execution: bool = False) -> str:
     """Complete doctrine for the Opus surfaces (macro plan, weekly review, chat).
 
@@ -366,7 +379,7 @@ def full_doctrine(db, today: date | None = None, execution: bool = False) -> str
     race-day execution (format) -> the cross-cutting guardrails. The shared core is
     the tuned part and is never rewritten per format; see coach/formats/."""
     fmt = format_for(db, today)
-    blocks = [athlete_block(db, today), fmt.race_demands, SHARED_TRAINING, fmt.training_addenda]
+    blocks = [athlete_block(db, today), fmt.race_demands, shared_training(fmt), fmt.training_addenda]
     if execution:
         blocks.append(fmt.execution)
     # CORRECTIONS is an Opus-surface guardrail from the 2026-08-03 Opus-5 eval, where a
@@ -399,9 +412,7 @@ def compact_doctrine(db, today: date | None = None) -> str:
         f"COACHING DOCTRINE ({fmt.label}, compact):\n"
         f"- A-race {g['race_date'].isoformat()} ({days} days out): {fmt.compact}{window}"
         f"{' ' + race_bits + '.' if race_bits else ''}\n"
-        "- Training currency: time-on-feet, ~80/20 easy; race fueling rehearsed inside long runs (the gut is "
-        "trainable); volume ramps ~10%/week max with down-weeks; never volume and intensity in the same week; "
-        "chronic consistency beats any single session.\n"
+        f"- Training currency: {fmt.compact_training or DEFAULT_COMPACT_TRAINING}\n"
         "- Everything personal — history, physiology, diet, climate, injuries, life constraints — comes from "
         "the athlete state you are given (`coaching_notes`, `context.preferences`, injuries, bloods, dietary "
         "profile), never from assumption; where it's thin, say what you don't know. If they train or race in "

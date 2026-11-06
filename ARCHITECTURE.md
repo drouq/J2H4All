@@ -477,6 +477,20 @@ much they care about it, travel around it, whether it is a tune-up) was invisibl
 coach planning around it. It reaches the athlete block now. When adding a field, check
 that it reaches the prompt as well as the page.
 
+### The "shared" core was ultra-shaped in its first line
+
+The shared training block opened with "time-on-feet is the currency … distance and pace
+are outputs". That line is right for every ultra and wrong for a time-goal marathon, which
+then got the marathon format block, built around goal pace, straight after it. The compact
+doctrine and the weekly-review prompt repeated the same ultra framing. The reference
+deployment's first switch to a time-goal marathon exposed it.
+
+The currency line is now supplied per format: `Format.engine` and `Format.compact_training`,
+with `None` keeping the endurance default. The marathon format also tells the coach to read
+the target against current fitness and say plainly when it isn't supported. **When adding a
+format, grep every prompt for the vocabulary of the formats that already exist, not just the
+format module.**
+
 ---
 
 ## 5. Deliberately out of scope

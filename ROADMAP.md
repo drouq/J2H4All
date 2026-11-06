@@ -42,7 +42,10 @@ near-misses (`marathon`, `UTMB`, `100k`); anything unrecognised degrades to gene
 never raises. `Goal` gained `distance_km`, `elevation_gain_m` and `target_time`
 (migration 0016), since `loop_km`/`target_laps` mean nothing outside a backyard. The macro
 prompt takes its phase vocabulary from the format, so a marathon build is no longer asked
-for a "backyard-specific" block.
+for a "backyard-specific" block. A format can also replace the shared block's training
+currency (`Format.engine`, `Format.compact_training`). The marathon uses this so it is
+coached on goal pace rather than time-on-feet, and it is told to be honest about whether
+the target time is supported.
 
 **Undecided race dates** (migration 0017). Athletes often know roughly when the race is
 before they know the day: a ballot, a choice between two events, a race they organise
